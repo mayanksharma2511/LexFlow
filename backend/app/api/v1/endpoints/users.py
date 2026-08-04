@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database.dependencies import get_db
+from app.dependencies.auth import get_current_user
 from app.schemas.user import UserCreate, UserResponse
 from app.services.user import user_service
 
@@ -38,6 +39,16 @@ def get_users(
     db: Session = Depends(get_db),
 ):
     return user_service.get_all_users(db)
+
+
+@router.get(
+    "/me",
+    response_model=UserResponse,
+)
+def get_me(
+    current_user=Depends(get_current_user),
+):
+    return current_user
 
 
 @router.get(
