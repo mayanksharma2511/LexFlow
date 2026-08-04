@@ -2,9 +2,10 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import DateTime, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.database import Base
+from app.enums.user_role import UserRole
 
 
 class User(Base):
@@ -33,8 +34,15 @@ class User(Base):
     )
 
     role: Mapped[str] = mapped_column(
-        String(20),
-        default="LAWYER"
+    String(20),
+    nullable=False,
+    default=UserRole.LAWYER.value,
+    )
+
+    cases = relationship(
+        "Case",
+        back_populates="owner",
+        cascade="all, delete-orphan",
     )
 
     created_at: Mapped[datetime] = mapped_column(

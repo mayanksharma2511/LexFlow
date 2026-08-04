@@ -18,3 +18,11 @@ def verify_password(
         plain_password,
         hashed_password,
     )
+def authenticate_password(
+    plain_password: str,
+    hashed_password: str,
+) -> bool:
+    return verify_password(
+        plain_password,
+        hashed_password,
+    )

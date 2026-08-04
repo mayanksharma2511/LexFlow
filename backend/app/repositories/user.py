@@ -17,6 +17,14 @@ class UserRepository:
             .first()
         )
 
+    # Alias for authentication
+    def get_user_by_email(
+        self,
+        db: Session,
+        email: str
+    ) -> User | None:
+        return self.get_by_email(db, email)
+
     def get_by_id(
         self,
         db: Session,
