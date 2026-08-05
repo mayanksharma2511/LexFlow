@@ -8,7 +8,7 @@ import uuid
 
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
-
+from app.services.ocr.ocr_service import ocr_service
 from app.models.document import Document
 from app.repositories.document import document_repository
 from app.schemas.document import DocumentCreate
@@ -34,10 +34,12 @@ class DocumentService:
 
         with open(filepath, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
+            text = ocr_service.extract_text(str(filepath))
 
         document = Document(
             file_name=file.filename,
             file_path=str(filepath),
+            extracted_text=text,
             document_type=data.document_type,
             case_id=data.case_id,
         )
