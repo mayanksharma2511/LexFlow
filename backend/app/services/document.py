@@ -1,3 +1,7 @@
+from app.utils.document_validator import (
+    validate_file,
+    validate_file_size,
+)
 from pathlib import Path
 import shutil
 import uuid
@@ -19,7 +23,9 @@ class DocumentService:
         file: UploadFile,
         data: DocumentCreate,
     ) -> Document:
-
+        validate_file(file)
+        validate_file_size(file)
+    
         extension = Path(file.filename).suffix
 
         filename = f"{uuid.uuid4()}{extension}"
@@ -68,6 +74,30 @@ class DocumentService:
         return document_repository.get_by_id(
             db,
             document_id,
+        )
+
+    def delete_document(
+        self,
+        db: Session,
+        document_id: str,
+        ) -> None:
+
+        document = document_repository.get_by_id(
+            db,
+            document_id,
+        )
+
+        if document is None:
+            raise ValueError("Document not found.")
+        
+        filepath = Path(document.file_path)
+
+        if filepath.exists():
+            filepath.unlink()
+
+        document_repository.delete(
+            db,
+            document,
         )
 
 
