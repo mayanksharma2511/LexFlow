@@ -65,6 +65,12 @@ class Case(Base):
         ForeignKey("users.id"),
         nullable=False
     )
+    
+    documents = relationship(
+        "Document",
+        back_populates="case",
+        cascade="all, delete-orphan",
+    )
 
     owner = relationship(
         "User",
