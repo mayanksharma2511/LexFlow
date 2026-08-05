@@ -16,3 +16,4 @@ class DocumentResponse(BaseModel):
     file_path: str
     document_type: DocumentType
     case_id: str
+    extracted_text: str | None
