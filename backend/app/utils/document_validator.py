@@ -17,7 +17,8 @@ MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB
 
 def validate_file(file: UploadFile) -> None:
 
-    extension = Path(file.filename or "").suffix.lower()
+    filename = (file.filename or "").strip("\"'")
+    extension = Path(filename).suffix.lower()
 
     if extension not in ALLOWED_EXTENSIONS:
         raise HTTPException(
