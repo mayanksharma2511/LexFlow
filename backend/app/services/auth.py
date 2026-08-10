@@ -6,6 +6,7 @@ from app.core.auth import create_access_token
 from app.core.config import settings
 from app.core.security import verify_password
 from app.repositories.user import user_repository
+from app.services.audit_log import audit_log_service
 
 
 class AuthService:
@@ -39,6 +40,16 @@ class AuthService:
             expires_delta=timedelta(
                 minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
             ),
+        )
+
+        # Record successful login
+        audit_log_service.log(
+            db=db,
+            user_id=user.id,
+            action="LOGIN",
+            entity_type="user",
+            entity_id=user.id,
+            details="User signed in successfully.",
         )
 
         return access_token

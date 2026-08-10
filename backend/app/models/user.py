@@ -55,3 +55,9 @@ class User(Base):
         default=datetime.utcnow,
         onupdate=datetime.utcnow
     )
+
+    audit_logs = relationship(
+    "AuditLog",
+    back_populates="user",
+    cascade="all, delete-orphan",
+    )

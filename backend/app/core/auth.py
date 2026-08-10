@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from jose import JWTError, jwt
+from jose import JWTError, jwt  # type: ignore[import-untyped]
 
 from app.core.config import settings
 
@@ -23,7 +23,11 @@ def create_access_token(
         )
     )
 
-    to_encode.update({"exp": expire})
+    to_encode.update(
+        {
+            "exp": expire,
+        }
+    )
 
     return jwt.encode(
         to_encode,
@@ -32,7 +36,9 @@ def create_access_token(
     )
 
 
-def decode_access_token(token: str):
+def decode_access_token(
+    token: str,
+) -> dict | None:
 
     try:
         payload = jwt.decode(
@@ -41,7 +47,22 @@ def decode_access_token(token: str):
             algorithms=[settings.ALGORITHM],
         )
 
+        print("========== JWT DEBUG ==========")
+        print("ALGORITHM:", settings.ALGORITHM)
+        print("SECRET KEY PRESENT:", bool(settings.SECRET_KEY))
+        print("TOKEN LENGTH:", len(token))
+        print("PAYLOAD:", payload)
+        print("===============================")
+
         return payload
 
-    except JWTError:
+    except JWTError as e:
+        print("========== JWT ERROR ==========")
+        print("ERROR TYPE:", type(e).__name__)
+        print("ERROR:", str(e))
+        print("ALGORITHM:", settings.ALGORITHM)
+        print("SECRET KEY PRESENT:", bool(settings.SECRET_KEY))
+        print("TOKEN LENGTH:", len(token))
+        print("===============================")
+
         return None

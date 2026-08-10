@@ -1,8 +1,12 @@
+from pathlib import Path
+
 from fastapi import HTTPException, UploadFile, status
 
 ALLOWED_EXTENSIONS = {
     ".pdf",
     ".docx",
+    ".doc",
+    ".txt",
     ".png",
     ".jpg",
     ".jpeg",
@@ -13,7 +17,7 @@ MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB
 
 def validate_file(file: UploadFile) -> None:
 
-    extension = "." + file.filename.split(".")[-1].lower()
+    extension = Path(file.filename or "").suffix.lower()
 
     if extension not in ALLOWED_EXTENSIONS:
         raise HTTPException(

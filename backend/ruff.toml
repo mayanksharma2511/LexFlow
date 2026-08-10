@@ -1,0 +1,22 @@
+target-version = "py312"
+line-length = 120
+exclude = [
+    ".git",
+    "venv",
+    ".venv",
+    "__pycache__",
+    "alembic",
+]
+
+[lint]
+ignore = [
+    "B008",    # FastAPI Depends in function defaults
+    "BLE001",  # Exception catching in fault-tolerant fallback handlers
+    "E501",    # Line too long
+]
+select = [
+    "E",
+    "F",
+    "W",
+    "I",
+]

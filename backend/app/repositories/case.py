@@ -41,6 +41,22 @@ class CaseRepository:
             .first()
         )
 
+    def get_by_id_and_owner(
+        self,
+        db: Session,
+        case_id: str,
+        owner_id: str,
+    ) -> Case | None:
+
+        return (
+            db.query(Case)
+            .filter(
+                Case.id == case_id,
+                Case.owner_id == owner_id,
+            )
+            .first()
+        )
+
     def update(
         self,
         db: Session,
