@@ -150,8 +150,3 @@ npm run build
 
 **Mayank Sharma**  
 - GitHub: [@mayanksharma2511](https://github.com/mayanksharma2511)
-
----
-
-## 📄 License
-MIT License — Free for educational and personal use.
