@@ -17,10 +17,12 @@ import {
   Gavel,
   Download,
   Trash2,
+  FileDiff,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import apiClient from "../api/client";
+import { CompareDocumentsModal } from "../components/CompareDocumentsModal";
 import "./DocumentDetails.css";
 
 interface Analysis {
@@ -73,6 +75,8 @@ function DocumentDetails() {
   const [activeAnalysis, setActiveAnalysis] =
     useState<AnalysisType | null>(null);
   const [error, setError] = useState("");
+  const [isCompareOpen, setIsCompareOpen] = useState(false);
+  const [caseDocuments, setCaseDocuments] = useState<{ id: string; file_name: string; document_type: string }[]>([]);
 
   useEffect(() => {
     async function loadDocument() {
@@ -94,6 +98,16 @@ function DocumentDetails() {
 
         setDocument(documentResponse.data);
         setAnalyses(analysesResponse.data);
+
+        if (documentResponse.data.case_id) {
+          apiClient.get<{ documents: { id: string; file_name: string; document_type: string }[] }>(
+            `/cases/${documentResponse.data.case_id}/dashboard`
+          ).then((caseRes) => {
+            setCaseDocuments(caseRes.data.documents || []);
+          }).catch(() => {
+            setCaseDocuments([]);
+          });
+        }
       } catch {
         setError("Unable to load this document.");
       } finally {
@@ -387,8 +401,27 @@ function DocumentDetails() {
               runAnalysis("risks")
             }
           />
+
+          <AnalysisAction
+            icon={<FileDiff size={18} />}
+            title="Compare"
+            description="Compare with another document"
+            active={false}
+            disabled={analyzing || caseDocuments.length < 2}
+            onClick={() => setIsCompareOpen(true)}
+          />
         </div>
       </section>
+
+      {document.case_id && (
+        <CompareDocumentsModal
+          isOpen={isCompareOpen}
+          onClose={() => setIsCompareOpen(false)}
+          caseId={document.case_id}
+          documents={caseDocuments}
+          initialDocId={document.id}
+        />
+      )}
 
       {/* RESULTS */}
       <section className="analysis-results">
