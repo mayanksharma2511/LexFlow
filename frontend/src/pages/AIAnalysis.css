@@ -1,340 +1,157 @@
 /* =========================================================
-   LEXFLOW — AI ANALYSIS
-========================================================= */
+   LEXFLOW — AI ANALYSIS (HIGH CONTRAST)
+   ========================================================= */
 
 .ai-page {
   width: 100%;
-  max-width: 1280px;
-
+  max-width: 1440px;
   margin: 0 auto;
-
-  padding: 32px 40px 72px;
-
+  padding: 28px 36px 72px;
   box-sizing: border-box;
 }
 
 /* =========================================================
    PAGE HEADER
-========================================================= */
+   ========================================================= */
 
 .ai-page-header {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-
   gap: 30px;
-
   margin-bottom: 32px;
 }
 
 .ai-page-header h1 {
   margin: 6px 0 10px;
-
-  color: #f1f1f1;
-
+  color: #ffffff;
   font-size: clamp(30px, 3vw, 40px);
   line-height: 1.12;
-
-  font-weight: 650;
-
+  font-weight: 700;
   letter-spacing: -0.03em;
 }
 
 .ai-page-header p {
   margin: 0;
-
   max-width: 620px;
-
-  color: #858585;
-
-  font-size: 13px;
-
+  color: #cbd5e1;
+  font-size: 14px;
   line-height: 1.6;
 }
 
 .ai-header-badge {
   display: inline-flex;
   align-items: center;
-
   gap: 7px;
-
   flex-shrink: 0;
-
-  padding: 8px 12px;
-
-  color: #d8b56a;
-
-  background: rgba(216, 181, 106, 0.07);
-
-  border: 1px solid rgba(216, 181, 106, 0.17);
-
+  padding: 8px 14px;
+  color: var(--accent, #c9a96e);
+  background: var(--accent-soft, rgba(201, 169, 110, 0.14));
+  border: 1px solid var(--accent-border, rgba(201, 169, 110, 0.35));
   border-radius: 999px;
-
   font-size: 11px;
-
-  font-weight: 600;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 /* =========================================================
    INTRO CARD
-========================================================= */
+   ========================================================= */
 
 .ai-intro-card {
   position: relative;
-
   display: flex;
   align-items: center;
-
   gap: 18px;
-
   min-height: 145px;
-
-  margin-bottom: 46px;
-
+  margin-bottom: 40px;
   padding: 28px 30px;
-
   overflow: hidden;
-
   box-sizing: border-box;
-
   background:
-    linear-gradient(
-      145deg,
-      rgba(216, 181, 106, 0.075),
-      rgba(255, 255, 255, 0.025)
-    );
-
-  border: 1px solid rgba(216, 181, 106, 0.17);
-
+    radial-gradient(
+      circle at 100% 0,
+      rgba(201, 169, 110, 0.12),
+      transparent 60%
+    ),
+    var(--surface, #13161c) !important;
+  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.16)) !important;
   border-radius: 16px;
-
-  box-shadow:
-    0 15px 45px rgba(0, 0, 0, 0.16);
-}
-
-.ai-intro-glow {
-  position: absolute;
-
-  width: 230px;
-  height: 230px;
-
-  right: 80px;
-  top: -150px;
-
-  background: rgba(216, 181, 106, 0.08);
-
-  filter: blur(55px);
-
-  pointer-events: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
 }
 
 .ai-intro-icon {
   position: relative;
-
   width: 52px;
   height: 52px;
-
   flex: 0 0 52px;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
-  color: #d8b56a;
-
-  background: rgba(216, 181, 106, 0.1);
-
-  border: 1px solid rgba(216, 181, 106, 0.2);
-
+  color: var(--accent, #c9a96e);
+  background: var(--accent-soft, rgba(201, 169, 110, 0.14));
+  border: 1px solid var(--accent-border, rgba(201, 169, 110, 0.35));
   border-radius: 14px;
-
-  box-shadow:
-    0 8px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
 }
 
 .ai-intro-content {
   position: relative;
-
   min-width: 0;
-
   z-index: 1;
 }
 
 .ai-intro-eyebrow {
   margin-bottom: 5px;
-
-  color: #a18a5d;
-
-  font-size: 10px;
-
-  font-weight: 600;
-
+  color: var(--accent, #c9a96e);
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
-
   letter-spacing: 0.1em;
 }
 
 .ai-intro-content h2 {
   margin: 0 0 7px;
-
-  color: #ededed;
-
+  color: #ffffff;
   font-size: 20px;
-
-  font-weight: 600;
-
+  font-weight: 650;
   letter-spacing: -0.015em;
 }
 
 .ai-intro-content p {
   max-width: 690px;
-
   margin: 0;
-
-  color: #888;
-
-  font-size: 12px;
-
+  color: #cbd5e1;
+  font-size: 13px;
   line-height: 1.65;
 }
 
-.ai-intro-mark {
-  position: absolute;
-
-  right: 30px;
-  bottom: -25px;
-
-  color: rgba(216, 181, 106, 0.045);
-
-  font-size: 110px;
-
-  line-height: 1;
-
-  font-weight: 800;
-
-  letter-spacing: -0.08em;
-
-  user-select: none;
-
-  pointer-events: none;
-}
-
 /* =========================================================
-   SECTION
-========================================================= */
-
-.ai-documents-section,
-.ai-capabilities {
-  margin-top: 42px;
-}
-
-.section-heading {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-
-  gap: 20px;
-
-  margin-bottom: 18px;
-}
-
-.section-heading h2 {
-  margin: 4px 0 0;
-
-  color: #ededed;
-
-  font-size: 21px;
-
-  line-height: 1.2;
-
-  font-weight: 600;
-
-  letter-spacing: -0.015em;
-}
-
-.eyebrow {
-  color: #8d7953;
-
-  font-size: 10px;
-
-  font-weight: 600;
-
-  text-transform: uppercase;
-
-  letter-spacing: 0.09em;
-}
-
-.section-count {
-  min-width: 30px;
-  height: 30px;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  padding: 0 9px;
-
-  box-sizing: border-box;
-
-  color: #aaa;
-
-  background: rgba(255, 255, 255, 0.035);
-
-  border: 1px solid rgba(255, 255, 255, 0.08);
-
-  border-radius: 8px;
-
-  font-size: 12px;
-}
-
-/* =========================================================
-   DOCUMENT GRID
-========================================================= */
+   DOCUMENT GRID & CARDS
+   ========================================================= */
 
 .ai-document-grid {
   display: grid;
-
-  grid-template-columns:
-    repeat(2, minmax(0, 1fr));
-
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
 }
-
-/* =========================================================
-   DOCUMENT CARD
-========================================================= */
 
 .ai-document-card {
   width: 100%;
-
   min-width: 0;
-
   display: flex;
   align-items: center;
-
   gap: 14px;
-
-  padding: 17px 18px;
-
+  padding: 18px 20px;
   box-sizing: border-box;
-
   text-align: left;
-
-  color: inherit;
-
-  background:
-    linear-gradient(
-      145deg,
-      rgba(255, 255, 255, 0.042),
-      rgba(255, 255, 255, 0.017)
-    );
-
-  border: 1px solid rgba(255, 255, 255, 0.075);
-
-  border-radius: 13px;
-
+  color: #ffffff !important;
+  background: var(--surface, #13161c) !important;
+  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.16)) !important;
+  border-radius: 13px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
   cursor: pointer;
-
   transition:
     transform 160ms ease,
     border-color 160ms ease,
@@ -344,283 +161,93 @@
 
 .ai-document-card:hover {
   transform: translateY(-2px);
-
-  border-color: rgba(216, 181, 106, 0.28);
-
-  background:
-    linear-gradient(
-      145deg,
-      rgba(216, 181, 106, 0.07),
-      rgba(255, 255, 255, 0.022)
-    );
-
-  box-shadow:
-    0 13px 32px rgba(0, 0, 0, 0.2);
+  border-color: var(--accent-border, rgba(201, 169, 110, 0.4)) !important;
+  background: var(--surface-hover, #1e2430) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
 }
-
-.ai-document-card:active {
-  transform: translateY(0);
-}
-
-.ai-document-card:focus-visible {
-  outline: 1px solid rgba(216, 181, 106, 0.6);
-
-  outline-offset: 3px;
-}
-
-/* =========================================================
-   DOCUMENT ICON
-========================================================= */
 
 .ai-document-icon {
   width: 42px;
   height: 42px;
-
   flex: 0 0 42px;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
-  color: #d8b56a;
-
-  background: rgba(216, 181, 106, 0.09);
-
-  border: 1px solid rgba(216, 181, 106, 0.14);
-
+  color: var(--accent, #c9a96e);
+  background: var(--accent-soft, rgba(201, 169, 110, 0.14));
+  border: 1px solid var(--accent-border, rgba(201, 169, 110, 0.35));
   border-radius: 11px;
 }
 
-/* =========================================================
-   DOCUMENT INFO
-========================================================= */
-
 .ai-document-info {
   min-width: 0;
-
   flex: 1;
 }
 
 .ai-document-info h3 {
-  margin: 0 0 6px;
-
-  color: #e7e7e7;
-
-  font-size: 13px;
-
-  font-weight: 600;
-
+  margin: 0 0 4px;
+  color: #ffffff !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
   overflow: hidden;
-
   text-overflow: ellipsis;
-
   white-space: nowrap;
 }
 
 .ai-document-meta {
   display: flex;
   align-items: center;
-
   gap: 7px;
-
   min-width: 0;
-
-  color: #707070;
-
-  font-size: 10px;
-
-  text-transform: uppercase;
-
-  letter-spacing: 0.055em;
-
+  color: #cbd5e1 !important;
+  font-size: 11px !important;
   overflow: hidden;
 }
 
 .ai-document-meta span {
   overflow: hidden;
-
   text-overflow: ellipsis;
-
   white-space: nowrap;
 }
 
-.ai-meta-dot {
-  flex: 0 0 auto;
-
-  color: #444;
-}
-
-/* =========================================================
-   DOCUMENT ARROW
-========================================================= */
-
 .ai-document-arrow {
-  width: 31px;
-  height: 31px;
-
-  flex: 0 0 31px;
-
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-
-  color: #555;
-
-  background: rgba(255, 255, 255, 0.025);
-
-  border: 1px solid rgba(255, 255, 255, 0.045);
-
+  color: #94a3b8;
+  background: var(--surface-2, #181c24);
+  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.16));
   border-radius: 8px;
-
-  transition:
-    color 160ms ease,
-    background 160ms ease,
-    transform 160ms ease;
+  transition: color 160ms ease, transform 160ms ease;
 }
 
 .ai-document-card:hover .ai-document-arrow {
-  color: #d8b56a;
-
-  background: rgba(216, 181, 106, 0.08);
-
+  color: var(--accent, #c9a96e);
   transform: translateX(2px);
 }
 
 /* =========================================================
-   LOADING STATE
-========================================================= */
-
-.ai-state {
-  min-height: 180px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  gap: 9px;
-
-  color: #777;
-
-  font-size: 12px;
-
-  background: rgba(255, 255, 255, 0.014);
-
-  border: 1px solid rgba(255, 255, 255, 0.055);
-
-  border-radius: 14px;
-}
-
-.ai-loading-spinner {
-  color: #d8b56a;
-
-  animation: ai-spin 0.9s linear infinite;
-}
-
-@keyframes ai-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* =========================================================
-   EMPTY STATE
-========================================================= */
-
-.ai-empty {
-  min-height: 210px;
-
-  display: flex;
-  flex-direction: column;
-
-  align-items: center;
-  justify-content: center;
-
-  padding: 30px;
-
-  text-align: center;
-
-  background:
-    linear-gradient(
-      145deg,
-      rgba(255, 255, 255, 0.028),
-      rgba(255, 255, 255, 0.012)
-    );
-
-  border: 1px dashed rgba(255, 255, 255, 0.1);
-
-  border-radius: 14px;
-}
-
-.ai-empty-icon {
-  width: 46px;
-  height: 46px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  margin-bottom: 12px;
-
-  color: #d8b56a;
-
-  background: rgba(216, 181, 106, 0.08);
-
-  border-radius: 12px;
-}
-
-.ai-empty h3 {
-  margin: 0 0 7px;
-
-  color: #ddd;
-
-  font-size: 15px;
-}
-
-.ai-empty p {
-  max-width: 420px;
-
-  margin: 0;
-
-  color: #777;
-
-  font-size: 12px;
-
-  line-height: 1.6;
-}
-
-/* =========================================================
    CAPABILITIES
-========================================================= */
+   ========================================================= */
 
 .ai-capability-grid {
   display: grid;
-
-  grid-template-columns:
-    repeat(4, minmax(0, 1fr));
-
-  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
 }
 
 .ai-capability-card {
   position: relative;
-
   min-width: 0;
-
   padding: 20px;
-
   overflow: hidden;
-
-  background:
-    linear-gradient(
-      145deg,
-      rgba(255, 255, 255, 0.04),
-      rgba(255, 255, 255, 0.016)
-    );
-
-  border: 1px solid rgba(255, 255, 255, 0.07);
-
+  background: var(--surface, #13161c) !important;
+  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.16)) !important;
   border-radius: 13px;
-
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   transition:
     transform 160ms ease,
     border-color 160ms ease,
@@ -629,167 +256,49 @@
 
 .ai-capability-card:hover {
   transform: translateY(-2px);
-
-  border-color: rgba(216, 181, 106, 0.22);
-
-  box-shadow:
-    0 12px 30px rgba(0, 0, 0, 0.18);
+  border-color: var(--accent-border, rgba(201, 169, 110, 0.4)) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
 }
 
 .ai-capability-icon {
-  width: 38px;
-  height: 38px;
-
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-
   margin-bottom: 15px;
-
-  color: #d8b56a;
-
-  background: rgba(216, 181, 106, 0.09);
-
-  border: 1px solid rgba(216, 181, 106, 0.13);
-
+  color: var(--accent, #c9a96e);
+  background: var(--accent-soft, rgba(201, 169, 110, 0.14));
+  border: 1px solid var(--accent-border, rgba(201, 169, 110, 0.35));
   border-radius: 10px;
 }
 
 .ai-capability-content h3 {
-  margin: 0 0 7px;
-
-  color: #e7e7e7;
-
-  font-size: 13px;
-
+  margin: 0 0 6px;
+  color: #ffffff;
+  font-size: 14px;
   font-weight: 600;
 }
 
 .ai-capability-content p {
   margin: 0;
-
-  color: #777;
-
-  font-size: 11px;
-
-  line-height: 1.65;
+  color: #cbd5e1;
+  font-size: 12px;
+  line-height: 1.6;
 }
 
-.ai-capability-line {
-  position: absolute;
-
-  left: 20px;
-  right: 20px;
-  bottom: 0;
-
-  height: 1px;
-
-  background:
-    linear-gradient(
-      90deg,
-      rgba(216, 181, 106, 0),
-      rgba(216, 181, 106, 0.25),
-      rgba(216, 181, 106, 0)
-    );
-
-  opacity: 0;
-
-  transition: opacity 160ms ease;
-}
-
-.ai-capability-card:hover .ai-capability-line {
-  opacity: 1;
-}
-
-/* =========================================================
-   DANGER CAPABILITY
-========================================================= */
-
-.ai-capability-danger:hover {
-  border-color: rgba(210, 90, 90, 0.22);
-}
-
-.ai-capability-danger .ai-capability-icon {
-  color: #d98787;
-
-  background: rgba(190, 75, 75, 0.07);
-
-  border-color: rgba(190, 75, 75, 0.13);
-}
-
-.ai-capability-danger .ai-capability-line {
-  background:
-    linear-gradient(
-      90deg,
-      rgba(210, 90, 90, 0),
-      rgba(210, 90, 90, 0.25),
-      rgba(210, 90, 90, 0)
-    );
-}
-
-/* =========================================================
-   RESPONSIVE
-========================================================= */
-
+/* RESPONSIVE */
 @media (max-width: 1050px) {
   .ai-capability-grid {
-    grid-template-columns:
-      repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 850px) {
   .ai-page {
-    padding: 25px 22px 55px;
+    padding: 24px 20px 55px;
   }
-
-  .ai-page-header {
-    align-items: flex-start;
-
-    flex-direction: column;
-  }
-
-  .ai-header-badge {
-    display: none;
-  }
-
   .ai-document-grid {
     grid-template-columns: 1fr;
-  }
-
-  .ai-intro-card {
-    padding: 24px;
-  }
-
-  .ai-intro-mark {
-    display: none;
-  }
-}
-
-@media (max-width: 620px) {
-  .ai-page {
-    padding: 20px 16px 45px;
-  }
-
-  .ai-page-header h1 {
-    font-size: 27px;
-  }
-
-  .ai-intro-card {
-    align-items: flex-start;
-
-    flex-direction: column;
-  }
-
-  .ai-capability-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .ai-document-card {
-    padding: 15px;
-  }
-
-  .ai-document-meta {
-    flex-wrap: wrap;
   }
 }
