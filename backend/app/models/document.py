@@ -38,14 +38,37 @@ class Document(Base):
         default=DocumentType.OTHER,
     )
 
+    version: Mapped[int] = mapped_column(
+        nullable=False,
+        default=1,
+    )
+
     case_id: Mapped[str] = mapped_column(
         ForeignKey("cases.id"),
         nullable=False,
+        index=True,
     )
 
     case = relationship(
         "Case",
         back_populates="documents",
+    )
+
+    ai_analyses = relationship(
+        "AIAnalysis",
+        back_populates="document",
+        cascade="all, delete-orphan",
+    )
+
+    status: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+        default="COMPLETED",
+    )
+
+    error_message: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
     )
 
     uploaded_at: Mapped[datetime] = mapped_column(

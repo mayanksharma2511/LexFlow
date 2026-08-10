@@ -1,4 +1,12 @@
-from passlib.context import CryptContext
+import bcrypt
+from passlib.context import CryptContext  # type: ignore[import-untyped]
+
+if not hasattr(bcrypt, "__about__"):
+    bcrypt.__about__ = type(  # type: ignore[attr-defined]
+        "About",
+        (),
+        {"__version__": getattr(bcrypt, "__version__", "4.1.3")},
+    )()
 
 pwd_context = CryptContext(
     schemes=["bcrypt"],

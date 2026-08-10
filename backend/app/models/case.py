@@ -61,13 +61,25 @@ class Case(Base):
         default=CasePriority.MEDIUM.value
     )
 
+    error_message: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True
+    )
+
     owner_id: Mapped[str] = mapped_column(
         ForeignKey("users.id"),
-        nullable=False
+        nullable=False,
+        index=True,
     )
-    
+
     documents = relationship(
         "Document",
+        back_populates="case",
+        cascade="all, delete-orphan",
+    )
+
+    members = relationship(
+        "CaseMember",
         back_populates="case",
         cascade="all, delete-orphan",
     )
