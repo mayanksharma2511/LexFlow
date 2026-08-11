@@ -5,6 +5,12 @@ __pycache__/
 
 # Environment
 .env
+.env.*
+*.env
+**/.env
+!.env.example
+!backend/.env.example
+!frontend/.env.example
 
 # Uploads
 uploads/
