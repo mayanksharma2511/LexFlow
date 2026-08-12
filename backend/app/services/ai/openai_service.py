@@ -204,6 +204,45 @@ class OpenAIService:
         except json.JSONDecodeError:
             return {"risk_score": 0, "risk_level": "Low", "risks": []}
 
+    def _normalize_comparison_result(
+        self,
+        raw_result: dict,
+        default_summary: str = "Document comparison complete.",
+    ) -> dict[str, Any]:
+        """Ensures comparison results strictly adhere to ComparisonResponse schema fields."""
+        summary = str(raw_result.get("summary") or default_summary)
+
+        def _clean_changes(items: Any) -> list[dict[str, str]]:
+            if not isinstance(items, list):
+                return []
+            cleaned = []
+            for item in items:
+                if isinstance(item, dict):
+                    cleaned.append({
+                        "old": str(item.get("old", "")),
+                        "new": str(item.get("new", "")),
+                    })
+                elif isinstance(item, str):
+                    cleaned.append({"old": "", "new": item})
+            return cleaned
+
+        added = _clean_changes(raw_result.get("added"))
+        removed = _clean_changes(raw_result.get("removed"))
+        modified = _clean_changes(raw_result.get("modified"))
+
+        # Fallback mapping if model used 'differences' or 'changes' array instead
+        if not (added or removed or modified):
+            diffs = raw_result.get("differences") or raw_result.get("changes")
+            if isinstance(diffs, list):
+                modified = _clean_changes(diffs)
+
+        return {
+            "summary": summary,
+            "added": added,
+            "removed": removed,
+            "modified": modified,
+        }
+
     def compare_documents(
         self,
         old_text: str,
@@ -218,11 +257,21 @@ class OpenAIService:
                 "content": f"OLD DOCUMENT:\n{safe_old}\n\nNEW DOCUMENT:\n{safe_new}",
             },
         ]
-        content = self._execute_completion(messages, temperature=0, json_mode=True)
         try:
-            return json.loads(content or "{}")
-        except json.JSONDecodeError:
-            return {"differences": [], "summary": "Comparison could not be completed."}
+            content = self._execute_completion(messages, temperature=0, json_mode=True)
+            parsed = json.loads(content or "{}")
+            if not isinstance(parsed, dict):
+                parsed = {}
+            return self._normalize_comparison_result(
+                parsed,
+                default_summary="Document comparison complete.",
+            )
+        except Exception as exc:
+            logger.warning("Document comparison LLM error or fallback: %s", exc)
+            return self._normalize_comparison_result(
+                {},
+                default_summary="Comparison could not be completed automatically.",
+            )
 
     def synthesize_case(
         self,
