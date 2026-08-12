@@ -369,7 +369,12 @@ class AIAnalysisService:
             )
         except Exception as exc:
             self._handle_analysis_error(db, new_document, exc)
-            result = {"differences": [], "summary": f"Compared '{old_document.file_name}' and '{new_document.file_name}'."}
+            result = {
+                "summary": f"Compared '{old_document.file_name}' and '{new_document.file_name}'.",
+                "added": [],
+                "removed": [],
+                "modified": [],
+            }
 
         analysis = self._save_analysis(
             db,
