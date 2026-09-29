@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import apiClient from "../api/client";
+import { useCurrentUser } from "../api/currentUser";
 import { NewCaseModal } from "../components/NewCaseModal";
 
 interface Stats {
@@ -19,6 +20,39 @@ interface Stats {
   total_documents: number;
   total_ai_analyses: number;
   pending_review: number;
+}
+
+interface AuditEntry {
+  id: string;
+  action: string;
+  details: string | null;
+  created_at: string;
+}
+
+const AI_ACTION_LABELS: Record<string, string> = {
+  AI_SUMMARY: "Summary generated",
+  AI_CLASSIFICATION: "Document classified",
+  AI_CLAUSE_EXTRACTION: "Clauses extracted",
+  AI_RISK_ANALYSIS: "Risk analysis run",
+  AI_DOCUMENT_COMPARISON: "Documents compared",
+  AI_CASE_SYNTHESIS: "Case synthesis run",
+};
+
+function timeAgo(iso: string): string {
+  // The API stores times in UTC without a timezone marker; read them as UTC.
+  const utc = /[zZ]|[+-]\d\d:?\d\d$/.test(iso) ? iso : `${iso}Z`;
+  const minutes = Math.max(0, Math.round((Date.now() - new Date(utc).getTime()) / 60000));
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  return `${Math.round(hours / 24)}d`;
+}
+
+function greeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
 }
 
 interface CaseItem {
@@ -40,6 +74,9 @@ export default function Dashboard() {
   });
   const [cases, setCases] = useState<CaseItem[]>([]);
   const [isNewCaseOpen, setIsNewCaseOpen] = useState(false);
+  const [recentAI, setRecentAI] = useState<AuditEntry[]>([]);
+  const currentUser = useCurrentUser();
+  const firstName = currentUser?.full_name.split(" ")[0] || "";
 
   const loadData = () => {
     apiClient
@@ -51,6 +88,20 @@ export default function Dashboard() {
       .get<CaseItem[]>("/cases")
       .then((res) => setCases(res.data.slice(0, 4)))
       .catch(() => {});
+
+    apiClient
+      .get<AuditEntry[]>("/audit-logs")
+      .then((res) =>
+        setRecentAI(
+          res.data
+            .filter((e) => e.action in AI_ACTION_LABELS)
+            .sort((a, b) => b.created_at.localeCompare(a.created_at))
+            .slice(0, 3),
+        ),
+      )
+      .catch(() => {});
+
+
   };
 
   useEffect(() => {
@@ -68,7 +119,7 @@ export default function Dashboard() {
       <div className="dashboard-heading">
         <div>
           <div className="eyebrow">LEGAL WORKSPACE</div>
-          <h1>Good morning, Mayank.</h1>
+          <h1>{greeting()}{firstName ? `, ${firstName}` : ""}.</h1>
           <p>Here&apos;s what&apos;s happening across your legal workspace.</p>
         </div>
 
@@ -198,7 +249,7 @@ export default function Dashboard() {
           <div className="panel-header">
             <div>
               <h2>AI Intelligence</h2>
-              <p>Recent analysis activity</p>
+              <p>Your most recent AI analyses</p>
             </div>
 
             <div className="ai-badge">
@@ -207,51 +258,21 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="ai-summary">
-            <div className="ai-score">
-              <span>Risk profile</span>
-              <strong>Low</strong>
-              <div className="risk-bar">
-                <div />
-              </div>
-            </div>
-
-            <p>Your latest document analysis found no critical contractual risks.</p>
-          </div>
-
-          <div className="analysis-items">
-            <div className="analysis-item">
-              <div className="analysis-icon">
-                <Sparkles size={15} />
-              </div>
-              <div>
-                <strong>Lease Agreement</strong>
-                <span>Risk analysis completed</span>
-              </div>
-              <small>8m</small>
-            </div>
-
-            <div className="analysis-item">
-              <div className="analysis-icon">
-                <FileCheck2 size={15} />
-              </div>
-              <div>
-                <strong>Employment Contract</strong>
-                <span>Clause extraction completed</span>
-              </div>
-              <small>42m</small>
-            </div>
-
-            <div className="analysis-item">
-              <div className="analysis-icon">
-                <Sparkles size={15} />
-              </div>
-              <div>
-                <strong>Vendor Agreement</strong>
-                <span>Document classified</span>
-              </div>
-              <small>2h</small>
-            </div>
+          <div style={{ display: "grid", gap: "10px", padding: "16px 20px 20px" }}>
+            {recentAI.length === 0 ? (
+              <p style={{ color: "#94a3b8", fontSize: "14px" }}>No AI analyses yet. Open a document to run one.</p>
+            ) : (
+              recentAI.map((entry) => (
+                <div
+                  key={entry.id}
+                  style={{ display: "flex", alignItems: "center", gap: "12px", padding: "10px 12px", border: "1px solid #2a2f3a", borderRadius: "8px" }}
+                >
+                  {entry.action === "AI_CLAUSE_EXTRACTION" ? <FileCheck2 size={15} color="#c9a96e" /> : <Sparkles size={15} color="#c9a96e" />}
+                  <span style={{ flex: 1, fontSize: "14px", color: "#f8fafc" }}>{AI_ACTION_LABELS[entry.action]}</span>
+                  <small style={{ color: "#94a3b8" }}>{timeAgo(entry.created_at)} ago</small>
+                </div>
+              ))
+            )}
           </div>
         </section>
       </div>

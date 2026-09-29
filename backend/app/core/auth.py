@@ -1,68 +1,40 @@
+import logging
 from datetime import datetime, timedelta, timezone
 
 from jose import JWTError, jwt  # type: ignore[import-untyped]
 
 from app.core.config import settings
 
+logger = logging.getLogger(__name__)
+
+
+def _secret() -> str:
+    """The JWT signing key. Refuses to work without one, so tokens are never signed with an empty key."""
+    if not settings.SECRET_KEY:
+        raise RuntimeError("SECRET_KEY is not set. Add it to backend/.env (see .env.example).")
+    return settings.SECRET_KEY
+
 
 def create_access_token(
     data: dict,
     expires_delta: timedelta | None = None,
 ) -> str:
-
     to_encode = data.copy()
-
-    expire = (
-        datetime.now(timezone.utc)
-        + (
-            expires_delta
-            if expires_delta
-            else timedelta(
-                minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-            )
-        )
+    expire = datetime.now(timezone.utc) + (
+        expires_delta
+        if expires_delta
+        else timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
-
-    to_encode.update(
-        {
-            "exp": expire,
-        }
-    )
-
-    return jwt.encode(
-        to_encode,
-        settings.SECRET_KEY,
-        algorithm=settings.ALGORITHM,
-    )
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, _secret(), algorithm=settings.ALGORITHM)
 
 
 def decode_access_token(
     token: str,
 ) -> dict | None:
-
+    """Return the token's payload, or None if it is invalid or expired."""
     try:
-        payload = jwt.decode(
-            token,
-            settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM],
-        )
-
-        print("========== JWT DEBUG ==========")
-        print("ALGORITHM:", settings.ALGORITHM)
-        print("SECRET KEY PRESENT:", bool(settings.SECRET_KEY))
-        print("TOKEN LENGTH:", len(token))
-        print("PAYLOAD:", payload)
-        print("===============================")
-
-        return payload
-
+        return jwt.decode(token, _secret(), algorithms=[settings.ALGORITHM])
     except JWTError as e:
-        print("========== JWT ERROR ==========")
-        print("ERROR TYPE:", type(e).__name__)
-        print("ERROR:", str(e))
-        print("ALGORITHM:", settings.ALGORITHM)
-        print("SECRET KEY PRESENT:", bool(settings.SECRET_KEY))
-        print("TOKEN LENGTH:", len(token))
-        print("===============================")
-
+        logger.info("Rejected access token: %s", type(e).__name__)
         return None

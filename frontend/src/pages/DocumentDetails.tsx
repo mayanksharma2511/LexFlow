@@ -687,11 +687,21 @@ function formatClassificationResult(
   const documentType =
     String(value.document_type || "Unknown");
 
-  const confidenceValue =
-    value.confidence ?? 0;
+  // No confidence means the AI was unavailable and keyword rules were used instead.
+  if (value.confidence === null || value.confidence === undefined) {
+    return (
+      <div className="classification-result">
+        <div className="classification-primary">
+          <span className="analysis-json-key">Document type (keyword rules)</span>
+          <strong>{documentType}</strong>
+        </div>
+        <FallbackNote note={value.note} />
+      </div>
+    );
+  }
 
   const confidence =
-    getConfidencePercent(confidenceValue);
+    getConfidencePercent(value.confidence);
 
   return (
     <div className="classification-result">
@@ -706,7 +716,7 @@ function formatClassificationResult(
       <div className="classification-confidence">
         <div className="confidence-heading">
           <span className="analysis-json-key">
-            Confidence
+            AI's own confidence estimate
           </span>
 
           <span className="confidence-number">
@@ -727,10 +737,19 @@ function formatClassificationResult(
           <CheckCircle2 size={14} />
 
           <span>
-            {getConfidenceLabel(confidence)}
+            {getConfidenceLabel(confidence)} (reported by the AI, not measured)
           </span>
         </div>
       </div>
+    </div>
+  );
+}
+
+function FallbackNote({ note }: { note: unknown }) {
+  if (!note) return null;
+  return (
+    <div className="risk-empty" style={{ marginTop: "12px" }}>
+      <AlertTriangle size={13} /> {String(note)}
     </div>
   );
 }
@@ -752,11 +771,17 @@ function formatClauseResult(
   const entries = Object.entries(data).filter(
     ([key]) =>
       key !== "document_type" &&
-      key !== "confidence",
+      key !== "confidence" &&
+      key !== "method" &&
+      key !== "note",
   );
 
   return (
     <div className="clause-result">
+      <FallbackNote note={value.note} />
+      {entries.length === 0 && value.note ? (
+        <div className="clause-field-value">Nothing could be found with the text patterns.</div>
+      ) : null}
       {entries.map(([key, item]) => (
         <ClauseField
           key={key}
@@ -908,6 +933,22 @@ function formatRiskResult(
   const risks = Array.isArray(value.risks)
     ? value.risks
     : [];
+
+  // A risk analysis that could not be run must not look like a low-risk result.
+  if (riskScore === null || riskScore === undefined) {
+    return (
+      <div className="risk-result">
+        <div className="risk-level-block">
+          <span className="analysis-json-key">Overall risk</span>
+          <span className="risk-level-badge">
+            <AlertTriangle size={13} />
+            Not available
+          </span>
+        </div>
+        <FallbackNote note={value.note || "The risk analysis could not be completed."} />
+      </div>
+    );
+  }
 
   return (
     <div className="risk-result">

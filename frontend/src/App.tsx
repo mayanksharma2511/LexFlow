@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   Activity,
   BarChart3,
-  Bell,
   BriefcaseBusiness,
   ChevronDown,
   FileText,
@@ -22,9 +21,9 @@ import {
 
 import "./App.css";
 import { SettingsModal } from "./components/SettingsModal";
-import { ProgressOverlay } from "./components/ProgressOverlay";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ToastContainer } from "./components/ToastContainer";
+import { clearCurrentUser, formatRole, useCurrentUser } from "./api/currentUser";
 
 const navigation = [
   {
@@ -62,11 +61,12 @@ const navigation = [
 function App() {
   const navigate = useNavigate();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const user = useCurrentUser();
 
   function handleSignOut() {
     localStorage.removeItem("access_token");
+    clearCurrentUser();
     navigate("/login");
   }
 
@@ -74,7 +74,6 @@ function App() {
     <div className="app-shell">
       <ToastContainer />
       <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
-      <ProgressOverlay clientId="default_user" />
 
       <aside className="sidebar">
         <div className="brand">
@@ -116,10 +115,10 @@ function App() {
 
             <div>
               <div className="security-title">
-                Secure Workspace
+                Private workspace
               </div>
               <div className="security-text">
-                Your documents are protected.
+                Only you can see your cases.
               </div>
             </div>
           </div>
@@ -156,56 +155,14 @@ function App() {
             </button>
 
             <button
-              className="icon-button notification-button"
-              title="Notifications"
-              onClick={() => {
-                setShowProfileMenu(false);
-                setShowNotifications(!showNotifications);
-              }}
-            >
-              <Bell size={18} />
-              <span className="notification-dot" />
-            </button>
-
-            {showNotifications && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: "100%",
-                  right: "120px",
-                  marginTop: "8px",
-                  backgroundColor: "#1e293b",
-                  border: "1px solid #334155",
-                  borderRadius: "8px",
-                  padding: "12px",
-                  width: "280px",
-                  boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.5)",
-                  zIndex: 1000,
-                }}
-              >
-                <div style={{ fontSize: "13px", fontWeight: 600, color: "#f8fafc", marginBottom: "8px", borderBottom: "1px solid #334155", paddingBottom: "6px" }}>
-                  Workspace Notifications
-                </div>
-                <div style={{ display: "grid", gap: "8px" }}>
-                  <div style={{ fontSize: "12px", color: "#cbd5e1", background: "rgba(37, 99, 235, 0.1)", padding: "8px", borderRadius: "4px" }}>
-                    🔒 <strong>Security Policy:</strong> Row-level owner data isolation active.
-                  </div>
-                  <div style={{ fontSize: "12px", color: "#cbd5e1", background: "rgba(34, 197, 94, 0.1)", padding: "8px", borderRadius: "4px" }}>
-                    ⚡ <strong>OCR Engine:</strong> PyMuPDF / Tesseract extraction online.
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <button
               className="profile-button"
               onClick={() => setShowProfileMenu(!showProfileMenu)}
             >
-              <div className="avatar">M</div>
+              <div className="avatar">{(user?.full_name || "?")[0].toUpperCase()}</div>
 
               <div className="profile-info">
-                <span className="profile-name">Mayank</span>
-                <span className="profile-role">Attorney</span>
+                <span className="profile-name">{user?.full_name.split(" ")[0] || ""}</span>
+                <span className="profile-role">{formatRole(user?.role)}</span>
               </div>
 
               <ChevronDown size={15} />
@@ -235,10 +192,10 @@ function App() {
                   }}
                 >
                   <div style={{ fontSize: "14px", fontWeight: 600, color: "#f8fafc" }}>
-                    Mayank Sharma
+                    {user?.full_name}
                   </div>
                   <div style={{ fontSize: "12px", color: "#94a3b8" }}>
-                    mayank@example.com
+                    {user?.email}
                   </div>
                   <span
                     style={{
@@ -252,7 +209,7 @@ function App() {
                       fontWeight: 600,
                     }}
                   >
-                    LEAD COUNSEL
+                    {(user?.role || "").toUpperCase()}
                   </span>
                 </div>
 

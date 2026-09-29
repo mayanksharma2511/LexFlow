@@ -17,13 +17,8 @@ def get_current_user(
 
     payload = decode_access_token(token)
 
-    print("========== AUTH DEBUG ==========")
-    print("TOKEN RECEIVED:", bool(token))
-    print("PAYLOAD:", payload)
 
     if payload is None:
-        print("RESULT: JWT DECODE FAILED")
-        print("================================")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication token.",
@@ -31,11 +26,8 @@ def get_current_user(
 
     user_id = payload.get("sub")
 
-    print("SUB:", user_id)
 
     if not user_id:
-        print("RESULT: NO SUB IN TOKEN")
-        print("================================")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication token.",
@@ -46,9 +38,6 @@ def get_current_user(
         user_id,
     )
 
-    print("USER FOUND:", user is not None)
-    print("USER:", user)
-    print("================================")
 
     if user is None:
         raise HTTPException(

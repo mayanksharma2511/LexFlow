@@ -1,152 +1,88 @@
-# ⚖️ LexFlow — Full-Stack AI Legal Case Management & Analysis System
+# LexFlow
 
-**LexFlow** is a full-stack legal tech application built to streamline legal case management, document text extraction, risk auditing, and multi-document AI synthesis. 
+LexFlow is a web application for managing legal cases and analysing their documents with a large language model. You create a case, upload contracts or other documents (PDF, Word, text or images), and LexFlow extracts their text and can summarise them, classify them, pull out key clauses, flag risks, and compare two versions of a document.
 
-Built as a comprehensive software engineering portfolio project by **Mayank Sharma**, LexFlow demonstrates modern system design, asynchronous API development, LLM integration, OCR document pipelines, relational database optimization, and responsive frontend design.
+I built it as an independent project after friends doing law internships kept sending me documents to analyse with separate AI tools for each task.
 
----
+## What it does
 
-## 🎯 Technical Highlights & Skills Demonstrated
+| Feature | How it works |
+|---|---|
+| **Cases and documents** | Create cases, upload documents (up to 20 MB), and keep them organised per case |
+| **Text extraction** | PyMuPDF reads digital PDFs; Tesseract OCR reads scanned pages and images |
+| **Summary, classification, clause extraction, risk analysis** | Llama 3.1 8B through the Groq API, with a separate prompt for each task (and for NDAs, leases and employment contracts) |
+| **Document comparison** | The model lists what was added, removed or changed between two versions |
+| **Case synthesis** | The model summarises issues across all documents in a case |
+| **Search** | Keyword search across a case's documents (TF-IDF ranking of overlapping passages) |
+| **Activity log** | Every upload and AI analysis is recorded for the user who ran it |
 
-- **⚡ Fast REST API & Backend Architecture**: Built with **FastAPI**, **Python 3.13**, **Pydantic v2**, and **SQLAlchemy ORM**. Implements asynchronous endpoints, strict request/response validation, and clean layered architecture (Controllers $\rightarrow$ Services $\rightarrow$ Repositories).
-- **🤖 LLM Integration & Rate-Limit Resilience**: Integrates **Groq API (`llama-3.1-8b-instant`)** for document intelligence. Implements sliding token windowing (`truncate_for_llm`) and local heuristic fallbacks to prevent third-party rate limit (429) crashes on long scanned PDFs.
-- **📄 Multimodal Document & OCR Pipeline**: Supports `.pdf`, `.docx`, `.doc`, `.txt`, `.png`, `.jpg`, `.jpeg` uploads (up to 20MB). Combines **PyMuPDF** for digital text extraction with **Tesseract OCR** fallback for scanned images and contracts.
-- **🔐 Row-Level Security & Auth**: Full **JWT Bearer Token authentication** with bcrypt password hashing and server-side row-level data isolation (`owner_id` checks) preventing cross-account data leaks.
-- **🧠 Advanced NLP & RAG Concepts**: Implements RAG vector semantic search over case documents, TF-IDF/LLM hybrid summarization, and entity-relation Knowledge Graph generation.
-- **📊 Compliance Audit Trail**: Tracks all user actions (`CASE_CREATE`, `DOCUMENT_UPLOAD`, `AI_SUMMARY`) in PostgreSQL (`audit_logs`) with live security tracking.
-- **🐳 Full Containerization**: Standardized **Docker Compose** orchestration running FastAPI backend, React Nginx SPA proxy, PostgreSQL 16, and Redis 7.
+## When the AI is unavailable
 
----
+The Groq API has rate limits, so calls can fail. LexFlow retries, and if the call still fails it **says so** instead of inventing a result:
 
-## 💻 Tech Stack
+- a risk analysis that could not run is shown as **"Not available"**, never as low risk;
+- classification and clause extraction fall back to simple text rules (keywords, dates, "between X and Y", "governed by the laws of…"), clearly labelled as rule-based and without a confidence score;
+- summaries fall back to the document's own opening lines, labelled as such.
 
-- **Frontend**: React 18, TypeScript, Vite, Lucide Icons, Custom CSS Design System Tokens
-- **Backend**: FastAPI, Python 3.13, Uvicorn, Pydantic v2, SQLAlchemy
-- **Database & Caching**: PostgreSQL 16 (with indexed foreign keys), Redis 7
-- **AI & OCR Engines**: Groq LLM API (`llama-3.1-8b-instant`), PyMuPDF (`fitz`), Tesseract OCR
-- **DevOps & Testing**: Docker, Docker Compose, Nginx, Pytest, Mypy, Ruff
+The confidence shown for AI classifications is the model's own estimate, and the app labels it that way; it has not been measured.
 
----
+## Known limitation
 
-## 🚀 System Architecture
+To stay within the API's limits, LexFlow currently sends the model **only the first and last 3,500 characters** of a document. For long contracts, clauses in the middle are never analysed. Fixing this, and checking the model's answers against the document, is the next piece of work.
 
-```
-                                 +--------------------------------+
-                                 |    React + TypeScript SPA      |
-                                 |      (Vite + Lucide Icons)     |
-                                 +---------------+----------------+
-                                                 | REST API / WebSockets
-                                                 v
-                                 +---------------+----------------+
-                                 |    FastAPI Python Backend      |
-                                 |  (Uvicorn + Pydantic + JWT)    |
-                                 +-------+----------------+-------+
-                                         |                |
-                           +-------------+                +-------------+
-                           |                                            |
-                           v                                            v
-                +----------+----------+                      +----------+----------+
-                | PostgreSQL Database |                      |   Groq LLM AI Engine    |
-                | (SQLAlchemy Models) |                      | (llama-3.1-8b-instant)   |
-                +---------------------+                      +---------------------+
-```
+## Access control
 
----
+- Accounts use JWT authentication with bcrypt-hashed passwords.
+- Each user can only see and search their own cases and documents; every case and document lookup checks the owner.
+- Listing users requires an admin account.
 
-## 🛠️ Key Product Features
+## Tech stack
 
-1. **Legal Case & Matter Management**: Create, edit, search, and track legal matters with metadata, clients, opposing parties, court jurisdictions, and priority levels.
-2. **Document Processing & OCR**: Upload and parse legal contracts with automated digital text extraction and Tesseract OCR fallback.
-3. **AI Legal Intelligence (6 Core Capabilities)**:
-   - **Executive Summarization**: Generate concise overviews of long legal agreements.
-   - **Document Classification**: Categorize contracts (NDA, Lease, Affidavit, Petition) with confidence scores.
-   - **Clause & Entity Extraction**: Automatically extract parties, effective dates, governing laws, and obligations.
-   - **Risk Analysis**: Audit legal risk with severity scoring (High/Medium/Low) and mitigation advice.
-   - **Document Comparison**: Compare diffs and contractual variations between document versions.
-   - **Multi-Document Case Synthesis**: Synthesize cross-document intelligence across an entire matter file.
-4. **Interactive Analytics & Audit Trail**: Real-time risk distribution charts, document type breakdowns, and security audit logs.
+- **Backend:** Python, FastAPI, SQLAlchemy, Alembic, PostgreSQL, Pydantic
+- **AI and text extraction:** Groq API (Llama 3.1 8B), PyMuPDF, Tesseract OCR
+- **Frontend:** React, TypeScript, Vite
+- **Tooling:** pytest, Ruff, mypy, Docker Compose, Nginx
 
----
+## Running locally
 
-## 🛠️ Quick Start & Local Setup
+You need Python 3.11+, Node.js 18+, PostgreSQL (or Docker) and Tesseract.
 
-### Prerequisites
-- Node.js 18+ & npm
-- Python 3.11+
-- PostgreSQL 14+ (or Docker)
-
-### 1. Environment Configuration
-Create a `.env` file inside `backend/`:
-```env
-APP_NAME=LexFlow
-APP_VERSION=1.0.0
-GROQ_API_KEY=your_groq_api_key_here
-DATABASE_URL=postgresql://postgres:postgrespassword@localhost:5432/lexflow
-SECRET_KEY=your_jwt_secret_key_here
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=60
-```
-
-### 2. Backend Setup
 ```bash
+# Backend
 cd backend
-python -m venv venv
-source venv/bin/activate
+python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
-```
-Interactive API Documentation (Swagger UI): `http://127.0.0.1:8000/docs`
+cp .env.example .env          # then set SECRET_KEY, DATABASE_URL and GROQ_API_KEY
+uvicorn app.main:app --reload # http://127.0.0.1:8000/docs
 
-### 3. Frontend Setup
-```bash
+# Frontend (in another terminal)
 cd frontend
 npm install
-npm run dev
-```
-Open `http://localhost:5173/` in your browser.
-
----
-
-## 🐳 Docker Deployment (Single Command)
-
-Run the full stack (FastAPI Backend, React Nginx Frontend, PostgreSQL 16, and Redis 7) using Docker Compose:
-
-```bash
-docker-compose up --build -d
+npm run dev                   # http://localhost:5173
 ```
 
-- **Frontend SPA**: `http://localhost/`
-- **Backend API**: `http://localhost:8000/api/v1/`
-- **Swagger Docs**: `http://localhost:8000/docs`
+With Docker, create a `.env` file next to `docker-compose.yml` containing `SECRET_KEY` and `GROQ_API_KEY`, then run `docker compose up --build`.
 
----
+## Tests
 
-## 🧪 Testing & Code Quality
-
-Run backend unit tests and static type checking:
 ```bash
-# Backend Quality Assurance
 cd backend
-source venv/bin/activate
-ruff check .
-mypy .
-pytest
-
-# Frontend Quality Assurance
-cd frontend
-npx tsc --noEmit
-npm run build
+pip install -r requirements-dev.txt
+SECRET_KEY=test DATABASE_URL=sqlite:///./test.db pytest
 ```
 
----
+The tests cover the fallbacks (a failed analysis must never look like a real result), keyword search, document comparison and summarisation. The frontend is type-checked with `npx tsc --noEmit -p tsconfig.app.json`.
 
-## ⚖️ Disclaimer
+## Repository structure
 
-> **Academic / Portfolio Disclaimer**: LexFlow AI analysis outputs and document extractions are decision-support tools built for workflow automation and software engineering demonstration purposes. They do not constitute formal legal advice.
+```
+backend/app/api/        API endpoints
+backend/app/services/   business logic; services/ai/ holds the LLM calls, prompts and search
+backend/app/models/     database models (SQLAlchemy); migrations in backend/alembic/
+backend/app/tests/      tests
+frontend/src/           React app (pages/, components/, api/)
+```
 
----
+## Disclaimer
 
-## 👨‍💻 Author
-
-**Mayank Sharma**  
-- GitHub: [@mayanksharma2511](https://github.com/mayanksharma2511)
+LexFlow's AI output is an aid for reading documents, not legal advice.

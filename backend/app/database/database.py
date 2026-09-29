@@ -1,3 +1,4 @@
+import os
 from typing import Any
 
 from sqlalchemy import create_engine
@@ -11,7 +12,7 @@ if settings.DATABASE_URL.startswith("sqlite"):
 
 engine = create_engine(
     settings.DATABASE_URL,
-    echo=True,
+    echo=os.getenv("SQL_ECHO", "false").lower() == "true",  # SQL logging only when asked for
     connect_args=connect_args,
 )
 

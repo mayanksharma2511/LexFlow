@@ -8,20 +8,18 @@ import {
   Plus,
   Scale,
   Sparkles,
-  UserPlus,
   UserRound,
   FileDiff,
   Search,
   Loader2,
-  Network,
   CheckCircle2,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import apiClient from "../api/client";
+import { useCurrentUser } from "../api/currentUser";
 import { UploadDocumentModal } from "../components/UploadDocumentModal";
 import { CompareDocumentsModal } from "../components/CompareDocumentsModal";
-import { KnowledgeGraphView } from "../components/KnowledgeGraphView";
 
 interface CaseDetailsData {
   id: string;
@@ -62,20 +60,20 @@ interface AuditLog {
 }
 
 interface CaseAISynthesis {
-  overall_risk_score: number;
+  overall_risk_score: number | null;
   overall_risk_level: string;
   executive_summary: string;
   key_issues: (string | Record<string, unknown>)[];
   recommended_actions: (string | Record<string, unknown>)[];
 }
 
-interface SemanticSearchResult {
-  chunk_id: string;
+interface SearchResult {
+  passage_id: string;
   document_id: string;
   file_name: string;
   text_snippet: string;
   relevance_score: number;
-  chunk_index: number;
+  passage_index: number;
 }
 
 function formatItemText(item: unknown): string {
@@ -97,6 +95,7 @@ function CaseDetails() {
 
   const [caseData, setCaseData] = useState<CaseDetailsData | null>(null);
   const [members, setMembers] = useState<CaseMember[]>([]);
+  const currentUser = useCurrentUser();
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [aiSynthesis, setAiSynthesis] = useState<CaseAISynthesis | null>(null);
   const [loadingSynthesis, setLoadingSynthesis] = useState(false);
@@ -106,14 +105,13 @@ function CaseDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // RAG Semantic Search state
+  // Keyword search state
   const [searchQuery, setSearchQuery] = useState("");
   const [searching, setSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<SemanticSearchResult[] | null>(null);
+  const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null);
   const [searchError, setSearchError] = useState("");
 
   // Tab State
-  const [activeTab, setActiveTab] = useState<"overview" | "graph">("overview");
 
   const loadDetails = () => {
     if (!caseId) return;
@@ -167,20 +165,20 @@ function CaseDetails() {
     }
   };
 
-  const handleSemanticSearch = async (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!caseId || !searchQuery.trim()) return;
 
     setSearching(true);
     setSearchError("");
     try {
-      const res = await apiClient.get<SemanticSearchResult[]>(
-        `/cases/${caseId}/semantic-search`,
+      const res = await apiClient.get<SearchResult[]>(
+        `/cases/${caseId}/search`,
         { params: { query: searchQuery.trim(), top_k: 5 } }
       );
       setSearchResults(res.data);
     } catch {
-      setSearchError("Failed to execute RAG vector search.");
+      setSearchError("Search failed. Please try again.");
     } finally {
       setSearching(false);
     }
@@ -293,65 +291,21 @@ function CaseDetails() {
         </div>
       </div>
 
-      {/* VIEW TABS: OVERVIEW VS KNOWLEDGE GRAPH */}
-      <div style={{ display: "flex", gap: "12px", margin: "20px 0 0 0", borderBottom: "1px solid rgba(255, 255, 255, 0.1)" }}>
-        <button
-          onClick={() => setActiveTab("overview")}
-          style={{
-            padding: "10px 16px",
-            backgroundColor: "transparent",
-            border: "none",
-            borderBottom: activeTab === "overview" ? "2px solid #c9a96e" : "2px solid transparent",
-            color: activeTab === "overview" ? "#c9a96e" : "#94a3b8",
-            fontWeight: 600,
-            fontSize: "14px",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-          }}
-        >
-          <FileText size={16} /> Matter Workspace & Intelligence
-        </button>
-        <button
-          onClick={() => setActiveTab("graph")}
-          style={{
-            padding: "10px 16px",
-            backgroundColor: "transparent",
-            border: "none",
-            borderBottom: activeTab === "graph" ? "2px solid #c9a96e" : "2px solid transparent",
-            color: activeTab === "graph" ? "#c9a96e" : "#94a3b8",
-            fontWeight: 600,
-            fontSize: "14px",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-          }}
-        >
-          <Network size={16} /> Knowledge Graph & Entities
-        </button>
-      </div>
-
-      {activeTab === "graph" ? (
-        <KnowledgeGraphView caseId={caseData.id} />
-      ) : (
-        <>
-          {/* RAG VECTOR SEMANTIC SEARCH BAR */}
+          {/* KEYWORD SEARCH ACROSS CASE DOCUMENTS */}
           <section className="case-section" style={{ marginTop: "24px" }}>
             <div className="section-heading">
               <div>
-                <div className="eyebrow">Vector RAG Intelligence</div>
-                <h2>Semantic Matter Search</h2>
+                <div className="eyebrow">Keyword search</div>
+                <h2>Search This Case's Documents</h2>
               </div>
             </div>
 
-            <form onSubmit={handleSemanticSearch} style={{ display: "flex", gap: "12px", marginBottom: "16px" }}>
+            <form onSubmit={handleSearch} style={{ display: "flex", gap: "12px", marginBottom: "16px" }}>
               <div style={{ position: "relative", flex: 1 }}>
                 <Search size={18} style={{ position: "absolute", left: "14px", top: "12px", color: "#64748b" }} />
                 <input
                   type="text"
-                  placeholder="Search matter context (e.g. 'rent amount', 'highway acquisition compensation')..."
+                  placeholder="Words to find in this case's documents (e.g. 'termination notice', 'security deposit')"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   style={{
@@ -383,7 +337,7 @@ function CaseDetails() {
                 }}
               >
                 {searching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-                <span>RAG Search</span>
+                <span>Search</span>
               </button>
             </form>
 
@@ -396,18 +350,18 @@ function CaseDetails() {
             {searchResults && (
               <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px" }}>
                 <div style={{ fontSize: "12px", color: "#94a3b8" }}>
-                  Found {searchResults.length} ranked semantic match{searchResults.length === 1 ? "" : "es"}
+                  Found {searchResults.length} matching passage{searchResults.length === 1 ? "" : "s"}, ranked by keyword relevance
                 </div>
                 {searchResults.length === 0 ? (
                   <div style={{ padding: "16px", backgroundColor: "#13161c", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "8px", color: "#94a3b8", fontSize: "13px" }}>
-                    No matching semantic chunks found for "{searchQuery}".
+                    No passages share words with "{searchQuery}".
                   </div>
                 ) : (
                   searchResults.map((hit) => {
                     const pctScore = Math.round((hit.relevance_score || 0) * 100);
                     return (
                       <div
-                        key={hit.chunk_id}
+                        key={hit.passage_id}
                         style={{
                           padding: "14px",
                           backgroundColor: "#13161c",
@@ -421,7 +375,7 @@ function CaseDetails() {
                             style={{ background: "none", border: "none", color: "#60a5fa", fontWeight: 600, fontSize: "13px", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", padding: 0 }}
                           >
                             <FileText size={14} />
-                            {hit.file_name} (Chunk #{hit.chunk_index + 1})
+                            {hit.file_name} (passage {hit.passage_index + 1})
                           </button>
                           <span
                             style={{
@@ -474,14 +428,14 @@ function CaseDetails() {
                 <span
                   style={{
                     padding: "4px 10px",
-                    backgroundColor: (aiSynthesis.overall_risk_level || "").toLowerCase() === "high" ? "rgba(239, 68, 68, 0.2)" : "rgba(34, 197, 94, 0.2)",
-                    color: (aiSynthesis.overall_risk_level || "").toLowerCase() === "high" ? "#ef4444" : "#4ade80",
+                    backgroundColor: aiSynthesis.overall_risk_score == null ? "rgba(148, 163, 184, 0.2)" : (aiSynthesis.overall_risk_level || "").toLowerCase() === "high" ? "rgba(239, 68, 68, 0.2)" : "rgba(34, 197, 94, 0.2)",
+                    color: aiSynthesis.overall_risk_score == null ? "#cbd5e1" : (aiSynthesis.overall_risk_level || "").toLowerCase() === "high" ? "#ef4444" : "#4ade80",
                     borderRadius: "6px",
                     fontSize: "12px",
                     fontWeight: 600,
                   }}
                 >
-                  Risk Level: {aiSynthesis.overall_risk_level || "Medium"} ({aiSynthesis.overall_risk_score ?? 50}/100)
+                  Risk Level: {aiSynthesis.overall_risk_level || "Not available"}{aiSynthesis.overall_risk_score != null ? ` (${aiSynthesis.overall_risk_score}/100)` : ""}
                 </span>
               </div>
 
@@ -585,17 +539,16 @@ function CaseDetails() {
                     <div className="eyebrow">Case Team</div>
                     <h2>Members</h2>
                   </div>
-                  <UserPlus size={16} style={{ cursor: "pointer", color: "#60a5fa" }} />
                 </div>
 
                 <div className="description-card" style={{ display: "grid", gap: "12px", padding: "16px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <div style={{ width: "32px", height: "32px", borderRadius: "50%", backgroundColor: "#2563eb", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 600, color: "#fff" }}>
-                      M
+                      {(currentUser?.full_name || "?")[0].toUpperCase()}
                     </div>
                     <div>
-                      <div style={{ fontSize: "13px", fontWeight: 600, color: "#f8fafc" }}>Mayank Sharma (You)</div>
-                      <div style={{ fontSize: "11px", color: "#60a5fa" }}>Lead Counsel</div>
+                      <div style={{ fontSize: "13px", fontWeight: 600, color: "#f8fafc" }}>{currentUser?.full_name} (you)</div>
+                      <div style={{ fontSize: "11px", color: "#60a5fa" }}>Owner. Only the owner can open this case.</div>
                     </div>
                   </div>
 
@@ -638,8 +591,6 @@ function CaseDetails() {
               </section>
             </div>
           </div>
-        </>
-      )}
     </div>
   );
 }

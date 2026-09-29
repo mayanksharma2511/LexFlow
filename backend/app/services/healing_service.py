@@ -13,7 +13,7 @@ STALLED_THRESHOLD_MINUTES = 10
 
 
 class TaskHealingService:
-    """Enterprise self-healing manager for stuck or orphaned document analysis tasks."""
+    """Marks document analyses that have been stuck for too long as failed, so they can be retried."""
 
     def heal_stalled_documents(self, db: Session, threshold_minutes: int = STALLED_THRESHOLD_MINUTES) -> int:
         """Query documents stuck in PROCESSING or ANALYSIS_PENDING for longer than threshold_minutes.

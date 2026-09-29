@@ -44,7 +44,19 @@ def truncate_for_llm(text: str, max_chars: int = MAX_INPUT_CHARACTERS) -> str:
     return f"{text[:head_len]}\n\n[... OCR TEXT TRUNCATED FOR TOKEN LIMITS ...]\n\n{text[-tail_len:]}"
 
 
-class OpenAIService:
+def _parse_json(content: str | None, task: str) -> dict:
+    """Parse the model's JSON reply. An unreadable reply is treated as a failure (the caller
+    then shows that the analysis is unavailable) rather than replaced with made-up values."""
+    try:
+        parsed = json.loads(content or "")
+    except json.JSONDecodeError as exc:
+        raise LLMServiceError(f"The AI returned an unreadable {task} result.") from exc
+    if not isinstance(parsed, dict):
+        raise LLMServiceError(f"The AI returned an unexpected {task} result.")
+    return parsed
+
+
+class LLMService:
 
     def _execute_completion(self, messages: list[dict[str, str]], temperature: float = 0, json_mode: bool = False, max_retries: int = 2) -> str:
         """Internal execution helper wrapping LLM API calls with retry and exception classification."""
@@ -113,10 +125,7 @@ class OpenAIService:
             {"role": "user", "content": safe_text},
         ]
         content = self._execute_completion(messages, temperature=0, json_mode=True)
-        try:
-            return json.loads(content or "{}")
-        except json.JSONDecodeError:
-            return {"document_type": "Other", "confidence": 50}
+        return _parse_json(content, "classification")
 
     def extract_clauses(
         self,
@@ -145,10 +154,7 @@ class OpenAIService:
         ]
 
         content = self._execute_completion(messages, temperature=0, json_mode=True)
-        try:
-            result = json.loads(content or "{}")
-        except json.JSONDecodeError:
-            result = {}
+        result = _parse_json(content, "clause extraction")
 
         # Normalize parties into a simple list of strings.
         parties = result.get("parties", [])
@@ -199,10 +205,7 @@ class OpenAIService:
             {"role": "user", "content": safe_text},
         ]
         content = self._execute_completion(messages, temperature=0, json_mode=True)
-        try:
-            return json.loads(content or "{}")
-        except json.JSONDecodeError:
-            return {"risk_score": 0, "risk_level": "Low", "risks": []}
+        return _parse_json(content, "risk analysis")
 
     def _normalize_comparison_result(
         self,
@@ -287,16 +290,7 @@ class OpenAIService:
             },
         ]
         content = self._execute_completion(messages, temperature=0, json_mode=True)
-        try:
-            return json.loads(content or "{}")
-        except json.JSONDecodeError:
-            return {
-                "overall_risk_score": 50,
-                "overall_risk_level": "Medium",
-                "executive_summary": f"Matter analysis generated for '{case_title}'.",
-                "key_issues": [],
-                "recommended_actions": [],
-            }
+        return _parse_json(content, "case synthesis")
 
 
-openai_service = OpenAIService()
+llm_service = LLMService()

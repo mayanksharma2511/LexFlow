@@ -9,7 +9,7 @@ import re
 
 from pydantic import BaseModel, Field
 
-from app.services.ai.openai_service import openai_service
+from app.services.ai.llm_service import llm_service
 
 
 class ExtractiveSentence(BaseModel):
@@ -31,7 +31,7 @@ class HybridSummaryResult(BaseModel):
 
 
 class HybridNLPService:
-    """Academic-grade Hybrid NLP service combining TF-IDF and LLM pipelines."""
+    """Summarization that first picks key sentences with TF-IDF scoring, then asks the LLM to rewrite them."""
 
     def __init__(self, stopwords: set[str] | None = None) -> None:
         """Initialize the hybrid NLP service with default English legal stopwords."""
@@ -196,7 +196,7 @@ class HybridNLPService:
 
         # Pass condensed payload to LLM abstractive summarizer
         try:
-            abstractive = openai_service.summarize(condensed_payload)
+            abstractive = llm_service.summarize(condensed_payload)
         except Exception:  # noqa: BLE001
             abstractive = f"Extractive Summary Highlights:\n\n{condensed_payload}"
 

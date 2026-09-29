@@ -11,83 +11,112 @@ from app.models.document import Document
 from app.repositories.ai_analysis import ai_analysis_repository
 from app.repositories.case import case_repository
 from app.repositories.document import document_repository
-from app.services.ai.openai_service import openai_service
+from app.services.ai.llm_service import llm_service
 from app.services.audit_log import audit_log_service
 
 logger = logging.getLogger(__name__)
 
 
+AI_UNAVAILABLE_NOTE = (
+    "The AI service was unavailable, so this result comes from simple text rules "
+    "applied to the document, not from the AI model."
+)
+
+
 def generate_fallback_summary(file_name: str, extracted_text: str | None) -> str:
-    """Generate an informative, text-derived summary when LLM API rate limits are active."""
+    """When the AI service is unavailable, show the document's opening lines instead of a summary.
+
+    Nothing here is generated: it is the document's own text, labelled as such.
+    """
     if not extracted_text or not extracted_text.strip():
-        return f"Executive summary for '{file_name}': Document uploaded successfully. No text was extracted during OCR scanning."
+        return (
+            f"AI summary unavailable for '{file_name}', and no text could be extracted from the document."
+        )
 
     lines = [line.strip() for line in extracted_text.splitlines() if line.strip()]
-    words = extracted_text.split()
-    first_few_lines = "\n".join(lines[:6]) if lines else "Text content extracted."
-
+    opening = "\n".join(lines[:6])
     return (
-        f"### Executive Summary ({file_name})\n"
-        f"Document processed successfully with {len(words)} words extracted across {len(lines)} lines.\n\n"
-        f"**Extracted Key Excerpts:**\n\n{first_few_lines}\n\n"
-        f"*(Note: Primary AI API rate limit active. The summary above was synthesized directly from extracted source material.)*"
+        f"### AI summary unavailable ({file_name})\n"
+        "The AI service could not be reached, so no summary was generated. "
+        f"The document has {len(extracted_text.split())} words. Its opening lines are:\n\n{opening}"
     )
 
 
 def generate_fallback_classification(extracted_text: str | None) -> dict:
-    """Classify document category using keyword heuristics when LLM API is rate-limited."""
-    text_upper = (extracted_text or "").upper()
-    doc_type = "OTHER"
-    confidence = 75
+    """Guess the document type from keywords when the AI service is unavailable.
 
-    if "PETITION" in text_upper or "PLAINT" in text_upper or "COURT" in text_upper:
-        doc_type = "PETITION"
-        confidence = 85
-    elif "LEASE" in text_upper or "TENANT" in text_upper or "RENT" in text_upper:
-        doc_type = "CONTRACT"
-        confidence = 90
-    elif "AGREEMENT" in text_upper or "CONTRACT" in text_upper or "CLAUSE" in text_upper:
-        doc_type = "CONTRACT"
-        confidence = 85
+    No confidence is given, because keyword rules do not produce a measured confidence.
+    """
+    text_upper = (extracted_text or "").upper()
+    doc_type = "Unknown"
+    if "PETITION" in text_upper or "PLAINT" in text_upper:
+        doc_type = "Petition"
+    elif "LEASE" in text_upper or "TENANT" in text_upper:
+        doc_type = "Lease Agreement"
+    elif "NON-DISCLOSURE" in text_upper or "CONFIDENTIALITY AGREEMENT" in text_upper:
+        doc_type = "NDA"
+    elif "EMPLOYMENT" in text_upper and "AGREEMENT" in text_upper:
+        doc_type = "Employment Contract"
     elif "AFFIDAVIT" in text_upper or "SWORN" in text_upper:
-        doc_type = "AFFIDAVIT"
-        confidence = 90
+        doc_type = "Affidavit"
+    elif "AGREEMENT" in text_upper or "CONTRACT" in text_upper:
+        doc_type = "Contract"
 
     return {
         "document_type": doc_type,
-        "confidence": confidence,
-        "note": "Classified via extracted text keyword rules during API rate limit.",
+        "confidence": None,
+        "method": "keyword rules",
+        "note": AI_UNAVAILABLE_NOTE,
     }
 
 
 def generate_fallback_clauses(extracted_text: str | None) -> dict:
-    """Extract key terms (dates, parties, laws) using heuristic parsing during LLM API rate limit."""
+    """Pull out only what simple patterns can find (parties, dates, governing law) when the
+    AI service is unavailable. Anything not found is left out rather than filled in."""
     text = extracted_text or ""
+    data: dict[str, Any] = {}
+
     parties: list[str] = []
+    # "between X and Y" (the usual opening of a contract): take both sides
+    pair = re.search(
+        r"(?:by and between|between)\s+([A-Z][^\n]{2,80}?)\s+and\s+([A-Z][^\n]{2,80}?)"
+        r"(?=\s*(?:[\.,;(\n]|$|\b(?:dated|as of|effective|whereby|each)\b))",
+        text,
+    )
+    if pair:
+        parties = [p.strip(" ,") for p in pair.groups() if 2 < len(p.strip(" ,")) < 100]
+    if parties:
+        data["parties"] = parties
 
-    # Find party-like patterns
-    party_matches = re.findall(r"(?:between|among|by and between)\s+([A-Z][A-Za-z0-9\s,\.\(\)]+?)(?:and|\n|\.)", text, re.IGNORECASE)
-    for match in party_matches[:3]:
-        clean_p = match.strip()
-        if len(clean_p) > 3 and len(clean_p) < 100:
-            parties.append(clean_p)
+    dates = re.findall(
+        r"\b(?:\d{1,2}[-/]\d{1,2}[-/]\d{2,4}|(?:January|February|March|April|May|June|July|August|"
+        r"September|October|November|December)\s+\d{1,2},\s+\d{4}|\d{1,2}\s+(?:January|February|March|"
+        r"April|May|June|July|August|September|October|November|December)\s+\d{4})\b",
+        text,
+    )
+    if dates:
+        data["dates_found"] = list(dict.fromkeys(dates))[:5]
 
-    if not parties:
-        parties = ["Parties identified in uploaded legal document"]
-
-    # Find dates
-    dates = re.findall(r"\b(?:\d{1,2}[-/\s]\d{1,2}[-/\s]\d{2,4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4})\b", text, re.IGNORECASE)
-    effective_date = dates[0] if dates else "Specified in document text"
+    law = re.search(r"governed by(?: and construed in accordance with)? the laws? of ([A-Z][A-Za-z\s]{2,40}?)[,\.;]", text)
+    if law:
+        data["governing_law"] = law.group(1).strip()
 
     return {
-        "document_type": "Legal Document",
-        "confidence": 75,
-        "data": {
-            "parties": parties,
-            "effective_date": effective_date,
-            "governing_law": "Subject to matter jurisdiction specified in contract",
-            "key_provisions": f"Contains {len(text.split())} words of contractual provisions.",
-        },
+        "document_type": "Unknown",
+        "confidence": None,
+        "method": "text patterns",
+        "note": AI_UNAVAILABLE_NOTE,
+        "data": data,
+    }
+
+
+def unavailable_risk_result(reason: str) -> dict:
+    """A risk analysis that could not be run. It must never look like a low-risk result."""
+    return {
+        "risk_score": None,
+        "risk_level": "Not available",
+        "risks": [],
+        "note": f"Risk analysis could not be completed: {reason}",
     }
 
 
@@ -189,7 +218,7 @@ class AIAnalysisService:
         )
 
         try:
-            summary = openai_service.summarize(
+            summary = llm_service.summarize(
                 document.extracted_text or "",
             )
         except Exception as exc:
@@ -228,7 +257,7 @@ class AIAnalysisService:
         )
 
         try:
-            result = openai_service.classify_document(
+            result = llm_service.classify_document(
                 document.extracted_text or "",
             )
         except Exception as exc:
@@ -267,7 +296,7 @@ class AIAnalysisService:
         )
 
         try:
-            result = openai_service.extract_clauses(
+            result = llm_service.extract_clauses(
                 document.extracted_text or "",
             )
         except Exception as exc:
@@ -306,23 +335,12 @@ class AIAnalysisService:
         )
 
         try:
-            result = openai_service.analyze_risks(
+            result = llm_service.analyze_risks(
                 document.extracted_text or "",
             )
         except Exception as exc:
             self._handle_analysis_error(db, document, exc)
-            result = {
-                "risk_score": 25,
-                "risk_level": "Low",
-                "risks": [
-                    {
-                        "title": "Document Risk Audit",
-                        "severity": "Low",
-                        "description": f"Analyzed {len((document.extracted_text or '').split())} extracted words for legal risk exposure.",
-                        "recommendation": "Review extracted clauses and contractual obligations.",
-                    }
-                ],
-            }
+            result = unavailable_risk_result(str(exc) or "the AI service was unavailable.")
 
         analysis = self._save_analysis(
             db,
@@ -363,14 +381,17 @@ class AIAnalysisService:
         )
 
         try:
-            result = openai_service.compare_documents(
+            result = llm_service.compare_documents(
                 old_document.extracted_text or "",
                 new_document.extracted_text or "",
             )
         except Exception as exc:
             self._handle_analysis_error(db, new_document, exc)
             result = {
-                "summary": f"Compared '{old_document.file_name}' and '{new_document.file_name}'.",
+                "summary": (
+                    f"Comparison of '{old_document.file_name}' and '{new_document.file_name}' "
+                    "could not be completed because the AI service was unavailable."
+                ),
                 "added": [],
                 "removed": [],
                 "modified": [],
@@ -442,15 +463,15 @@ class AIAnalysisService:
         case_id: str,
         user_id: str,
     ) -> dict:
-        case = case_repository.get_by_id(db, case_id)
+        case = case_repository.get_by_id_and_owner(db, case_id, user_id)
         if case is None:
             raise ValueError("Case not found.")
 
         documents = document_repository.get_by_case(db, case_id)
         if not documents:
             return {
-                "overall_risk_score": 0,
-                "overall_risk_level": "Low",
+                "overall_risk_score": None,
+                "overall_risk_level": "Not available",
                 "executive_summary": "No documents found for this case.",
                 "key_issues": [],
                 "recommended_actions": ["Upload legal documents to initiate AI case synthesis."],
@@ -464,15 +485,15 @@ class AIAnalysisService:
         combined_text = "\n\n".join(texts)
         if not combined_text.strip():
             return {
-                "overall_risk_score": 0,
-                "overall_risk_level": "Low",
+                "overall_risk_score": None,
+                "overall_risk_level": "Not available",
                 "executive_summary": "No readable text extracted from case documents.",
                 "key_issues": [],
                 "recommended_actions": ["Re-upload documents with readable text or OCR coverage."],
             }
 
         try:
-            raw_res = openai_service.synthesize_case(case.title, combined_text)
+            raw_res = llm_service.synthesize_case(case.title, combined_text)
         except Exception as exc:
             logger.warning("Case synthesis degraded gracefully for case '%s': %s", case_id, exc)
             case.error_message = str(exc)
@@ -481,25 +502,25 @@ class AIAnalysisService:
             except Exception:
                 db.rollback()
             raw_res = {
-                "overall_risk_score": 50,
-                "overall_risk_level": "Medium",
-                "executive_summary": f"Matter analysis generated for '{case.title}'. Disputed terms and contractual performance metrics evaluated across {len(documents)} document(s).",
-                "key_issues": [
-                    "Disputed contractual performance obligations and timelines.",
-                    "Potential exposure to financial liability and remedies."
-                ],
-                "recommended_actions": [
-                    "Conduct complete discovery audit of uploaded evidence.",
-                    "Prepare strategic defense brief regarding contractual remedies."
-                ]
+                "overall_risk_score": None,
+                "overall_risk_level": "Not available",
+                "executive_summary": (
+                    f"AI synthesis for '{case.title}' could not be completed because the AI service "
+                    "was unavailable. No issues or actions were generated."
+                ),
+                "key_issues": [],
+                "recommended_actions": [],
             }
 
         raw_issues = raw_res.get("key_issues") or raw_res.get("issues") or []
         raw_actions = raw_res.get("recommended_actions") or raw_res.get("recommendations") or []
 
         normalized = {
-            "overall_risk_score": raw_res.get("overall_risk_score", 50),
-            "overall_risk_level": str(raw_res.get("overall_risk_level", "Medium")).capitalize(),
+            "overall_risk_score": raw_res.get("overall_risk_score"),
+            "overall_risk_level": (
+                str(raw_res["overall_risk_level"]).capitalize()
+                if raw_res.get("overall_risk_level") else "Not available"
+            ),
             "executive_summary": raw_res.get("executive_summary") or raw_res.get("summary") or f"Synthesized matter overview for {case.title}.",
             "key_issues": _flatten_string_list(raw_issues),
             "recommended_actions": _flatten_string_list(raw_actions),

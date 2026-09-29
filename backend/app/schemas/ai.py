@@ -10,13 +10,17 @@ class SummaryResponse(BaseModel):
 
 class ClauseExtractionResponse(BaseModel):
     document_type: str
-    confidence: float
+    confidence: float | None = None  # the AI's own estimate; None when rules were used instead
+    method: str | None = None
+    note: str | None = None
     data: dict[str, Any]
 
 
 class ClassificationResponse(BaseModel):
     document_type: str
-    confidence: float
+    confidence: float | None = None  # the AI's own estimate; None when rules were used instead
+    method: str | None = None
+    note: str | None = None
 
 
 class Risk(BaseModel):
@@ -26,9 +30,10 @@ class Risk(BaseModel):
 
 
 class RiskAnalysisResponse(BaseModel):
-    risk_score: int
+    risk_score: int | None = None  # None when the analysis could not be run
     risk_level: str
     risks: list[Risk]
+    note: str | None = None
 
 
 class ComparisonChange(BaseModel):

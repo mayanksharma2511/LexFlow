@@ -1,4 +1,5 @@
 import type React from 'react';
+import { formatRole, useCurrentUser } from '../api/currentUser';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -6,6 +7,7 @@ interface SettingsModalProps {
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
+  const user = useCurrentUser();
   if (!isOpen) return null;
 
   return (
@@ -14,10 +16,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
         <div style={headerStyle}>
           <div>
             <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#f8fafc' }}>
-              Workspace Settings
+              Account & About
             </h2>
             <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#94a3b8' }}>
-              Manage legal environment defaults, Security & Role controls
+              Your account and how LexFlow handles your documents
             </p>
           </div>
           <button type="button" onClick={onClose} style={closeButtonStyle}>
@@ -27,41 +29,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
         <div style={{ marginTop: '20px', display: 'grid', gap: '20px' }}>
           <div style={cardStyle}>
-            <h3 style={cardTitleStyle}>Security & Audit Policy</h3>
+            <h3 style={cardTitleStyle}>Your account</h3>
             <p style={cardTextStyle}>
-              Strict Row-Level Owner Isolation is active. All matter uploads and AI risk synthesis operations are recorded in the audit trail.
+              {user ? `${user.full_name} · ${user.email} · ${formatRole(user.role)}` : 'Loading...'}
             </p>
-            <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-              <span style={badgeStyle}>Owner Isolation: Active</span>
-              <span style={badgeStyle}>Auditing: Enabled</span>
-              <span style={badgeStyle}>AI Engine: Llama 3.1 8B</span>
-            </div>
           </div>
 
           <div style={cardStyle}>
-            <h3 style={cardTitleStyle}>OCR Engine Settings</h3>
+            <h3 style={cardTitleStyle}>How LexFlow works</h3>
             <p style={cardTextStyle}>
-              PyMuPDF fast text extraction with Tesseract OCR fallback on scanned documents.
-            </p>
-            <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <input type="checkbox" defaultChecked id="ocr-auto" style={{ accentColor: '#2563eb' }} />
-              <label htmlFor="ocr-auto" style={{ fontSize: '13px', color: '#cbd5e1', cursor: 'pointer' }}>
-                Automatically run OCR fallback on non-selectable PDF pages
-              </label>
-            </div>
-          </div>
-
-          <div style={cardStyle}>
-            <h3 style={cardTitleStyle}>Theme & Workspace Appearance</h3>
-            <p style={cardTextStyle}>
-              Dark Legal Intelligence mode (Default).
+              Each account can see only its own cases and documents, and every upload and AI analysis is
+              recorded in the activity log. Text is extracted with PyMuPDF, with Tesseract OCR for scanned
+              pages. AI analysis uses Llama 3.1 8B through the Groq API; when it is unavailable, LexFlow
+              says so and labels any rule-based result as such.
             </p>
           </div>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '24px' }}>
           <button onClick={onClose} style={submitButtonStyle}>
-            Save & Close
+            Close
           </button>
         </div>
       </div>
@@ -130,17 +117,6 @@ const cardTextStyle: React.CSSProperties = {
   fontSize: '13px',
   color: '#94a3b8',
   lineHeight: 1.5,
-};
-
-const badgeStyle: React.CSSProperties = {
-  display: 'inline-block',
-  padding: '4px 8px',
-  backgroundColor: 'rgba(37, 99, 235, 0.15)',
-  border: '1px solid rgba(37, 99, 235, 0.3)',
-  borderRadius: '4px',
-  color: '#60a5fa',
-  fontSize: '11px',
-  fontWeight: 600,
 };
 
 const submitButtonStyle: React.CSSProperties = {

@@ -1,5 +1,5 @@
 from app.schemas.ai import ComparisonResponse
-from app.services.ai.openai_service import openai_service
+from app.services.ai.llm_service import llm_service
 
 
 def test_comparison_result_normalization_successful():
@@ -9,7 +9,7 @@ def test_comparison_result_normalization_successful():
         "removed": [],
         "modified": [{"old": "$2000", "new": "$2500"}],
     }
-    normalized = openai_service._normalize_comparison_result(raw_data)
+    normalized = llm_service._normalize_comparison_result(raw_data)
     validated = ComparisonResponse(**normalized)
     assert validated.summary == "Rent changed."
     assert len(validated.added) == 1
@@ -21,7 +21,7 @@ def test_comparison_result_normalization_successful():
 def test_comparison_result_normalization_missing_categories():
     # Model returns only summary
     raw_data = {"summary": "No major changes identified."}
-    normalized = openai_service._normalize_comparison_result(raw_data)
+    normalized = llm_service._normalize_comparison_result(raw_data)
     validated = ComparisonResponse(**normalized)
     assert validated.summary == "No major changes identified."
     assert validated.added == []
@@ -35,7 +35,7 @@ def test_comparison_result_normalization_alternative_differences_key():
         "summary": "Differences detected.",
         "differences": [{"old": "Term 1", "new": "Term 2"}],
     }
-    normalized = openai_service._normalize_comparison_result(raw_data)
+    normalized = llm_service._normalize_comparison_result(raw_data)
     validated = ComparisonResponse(**normalized)
     assert validated.summary == "Differences detected."
     assert len(validated.modified) == 1
@@ -43,7 +43,7 @@ def test_comparison_result_normalization_alternative_differences_key():
 
 
 def test_comparison_fallback_on_empty_dict():
-    normalized = openai_service._normalize_comparison_result({})
+    normalized = llm_service._normalize_comparison_result({})
     validated = ComparisonResponse(**normalized)
     assert validated.summary == "Document comparison complete."
     assert validated.added == []

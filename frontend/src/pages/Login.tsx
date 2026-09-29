@@ -18,8 +18,8 @@ interface LoginResponse {
 function Login() {
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState("mayank@example.com");
-  const [password, setPassword] = useState("password123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -156,7 +156,7 @@ function Login() {
           <LockKeyhole size={14} />
 
           <span>
-            Secure, encrypted legal workspace
+            Each account sees only its own cases and documents
           </span>
         </div>
       </div>

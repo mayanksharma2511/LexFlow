@@ -2,6 +2,8 @@ from sqlalchemy.orm import Session
 
 from app.models.audit_log import AuditLog
 from app.repositories.audit_log import audit_log_repository
+from app.repositories.case import case_repository
+from app.repositories.document import document_repository
 
 
 class AuditLogService:
@@ -60,6 +62,8 @@ class AuditLogService:
         user_id: str,
     ) -> list[AuditLog]:
 
+        if document_repository.get_by_id_for_user(db, document_id, user_id) is None:
+            raise ValueError("Document not found.")
         return audit_log_repository.get_by_entity(
             db,
             "document",
@@ -73,6 +77,8 @@ class AuditLogService:
         user_id: str,
     ) -> list[AuditLog]:
 
+        if case_repository.get_by_id_and_owner(db, case_id, user_id) is None:
+            raise ValueError("Case not found.")
         return audit_log_repository.get_by_entity(
             db,
             "case",
