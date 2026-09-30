@@ -40,8 +40,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             <p style={cardTextStyle}>
               Each account can see only its own cases and documents, and every upload and AI analysis is
               recorded in the activity log. Text is extracted with PyMuPDF, with Tesseract OCR for scanned
-              pages. AI analysis uses Llama 3.1 8B through the Groq API; when it is unavailable, LexFlow
-              says so and labels any rule-based result as such.
+              pages. AI analysis uses a language model through the Groq API and reads the whole document in
+              sections. Every clause and risk comes with a quote that is checked against the document, and
+              when the AI is unavailable, LexFlow says so and labels any rule-based result as such.
             </p>
           </div>
         </div>

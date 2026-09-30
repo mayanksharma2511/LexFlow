@@ -1,0 +1,52 @@
+{
+  "model": "openai/gpt-oss-20b",
+  "contracts": 15,
+  "seed": 2027,
+  "totals": {
+    "start_and_end": {
+      "predicted": 29,
+      "correct": 19,
+      "not_found": 0,
+      "labelled": 81,
+      "found": 19
+    },
+    "whole": {
+      "predicted": 105,
+      "correct": 67,
+      "not_found": 6,
+      "labelled": 81,
+      "found": 56
+    }
+  },
+  "unreadable_replies": {
+    "start_and_end": 0,
+    "whole": 1
+  },
+  "calls": {
+    "start_and_end": 15,
+    "whole": 44
+  },
+  "recall_difference_ci95": [
+    0.2727272727272727,
+    0.6025641025641026
+  ],
+  "labelled_clauses": 81,
+  "visible_to_start_and_end": 26,
+  "contract_titles": [
+    "PROFOUNDMEDICALCORP_08_29_2019-EX-4.5-SUPPLY AGREEMENT",
+    "SPOKHOLDINGS,INC_06_19_2020-EX-10.1-COOPERATION AGREEMENT",
+    "GridironBionutrientsInc_20171206_8-K_EX-10.2_10972556_EX-10.2_Endorsement Agreement",
+    "VALENCETECHNOLOGYINC_02_14_2003-EX-10-JOINT VENTURE CONTRACT",
+    "HfEnterprisesInc_20191223_S-1_EX-10.22_11931299_EX-10.22_Development Agreement",
+    "INGEVITYCORP_05_16_2016-EX-10.5-INTELLECTUAL PROPERTY AGREEMENT",
+    "GridironBionutrientsInc_20171206_8-K_EX-10.1_10972555_EX-10.1_Endorsement Agreement",
+    "HEMISPHERX - Sales, Marketing, Distribution, and Supply Agreement",
+    "PcquoteComInc_19990721_S-1A_EX-10.11_6377149_EX-10.11_Co-Branding Agreement2",
+    "MSCIINC_02_28_2008-EX-10.10-",
+    "EMERALDHEALTHTHERAPEUTICSINC_06_10_2020-EX-4.5-CONSULTING AGREEMENT - DR. GAETANO MORELLO N.D. INC.",
+    "WestPharmaceuticalServicesInc_20200116_8-K_EX-10.1_11947529_EX-10.1_Supply Agreement",
+    "LohaCompanyltd_20191209_F-1_EX-10.16_11917878_EX-10.16_Supply Agreement",
+    "ACCELERATEDTECHNOLOGIESHOLDINGCORP_04_24_2003-EX-10.13-JOINT VENTURE AGREEMENT",
+    "SUCAMPOPHARMACEUTICALS,INC_11_04_2015-EX-10.2-STRATEGIC ALLIANCE AGREEMENT"
+  ]
+}

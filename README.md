@@ -83,7 +83,7 @@ and the app labels them that way; they have not been measured.
 
 ## Tech stack
 
-- **Backend:** Python, FastAPI, SQLAlchemy, Alembic, PostgreSQL, Pydantic
+- **Backend:** Python, FastAPI, SQLAlchemy, PostgreSQL, Pydantic
 - **AI and text extraction:** Groq API (gpt-oss-20b by default), RapidFuzz for quote checking, PyMuPDF, Tesseract OCR
 - **Frontend:** React, TypeScript, Vite
 - **Tooling:** pytest, Ruff, mypy, Docker Compose, Nginx
@@ -126,7 +126,7 @@ and keyword search. The frontend is type-checked with `npx tsc --noEmit -p tscon
 ```
 backend/app/api/        API endpoints
 backend/app/services/   business logic; services/ai/ holds the LLM calls, prompts, quote checking and search
-backend/app/models/     database models (SQLAlchemy); migrations in backend/alembic/
+backend/app/models/     database models (SQLAlchemy; tables are created when the app starts)
 backend/app/tests/      tests
 frontend/src/           React app (pages/, components/, api/)
 ```
