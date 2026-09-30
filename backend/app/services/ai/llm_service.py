@@ -27,7 +27,7 @@ from app.core.exceptions import (
     LLMRateLimitError,
     LLMServiceError,
 )
-from app.services.ai.grounding import normalize, verify_quote
+from app.services.ai.grounding import document_passage, normalize, normalize_with_offsets, verify_quote
 from app.services.ai.prompts import (
     CASE_SYNTHESIS_PROMPT,
     CLASSIFICATION_PROMPT,
@@ -123,8 +123,11 @@ def _coverage(text: str, sections: list[tuple[int, str]], read: list[tuple[int, 
 
 
 def _verify_items(items: list[dict], text: str) -> list[dict]:
-    """Attach a verification status to each item's quote and drop exact duplicates."""
-    doc = normalize(text)
+    """Attach a verification status to each item's quote and drop exact duplicates.
+
+    When the quote is found, `source_text` holds the document's own wording of the passage,
+    which is what the app shows (so small differences in the AI's copy are not displayed)."""
+    doc, offsets = normalize_with_offsets(text)
     seen: set[tuple[str, str]] = set()
     verified: list[dict] = []
     for item in items:
@@ -134,7 +137,16 @@ def _verify_items(items: list[dict], text: str) -> list[dict]:
             continue
         seen.add(key)
         check = verify_quote(quote, text, doc)
-        verified.append({**item, "quote": quote, "verification": check["status"], "match_score": check["score"]})
+        source = ""
+        if check["start"] is not None:
+            source = document_passage(text, offsets, check["start"], check["end"])
+        verified.append({
+            **item,
+            "quote": quote,
+            "source_text": source or None,
+            "verification": check["status"],
+            "match_score": check["score"],
+        })
     return verified
 
 

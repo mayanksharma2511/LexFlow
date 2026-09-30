@@ -26,3 +26,13 @@ def test_invented_text_is_not_found() -> None:
 
 def test_very_short_quotes_do_not_count() -> None:
     assert verify_quote("Delaware", DOCUMENT)["status"] == "not_found"
+
+
+def test_offsets_map_back_to_the_original_text() -> None:
+    from app.services.ai.grounding import document_passage, normalize, normalize_with_offsets
+
+    text = "  The Supplier’s  liability\nshall not exceed\t$1,000.  "
+    doc, offsets = normalize_with_offsets(text)
+    assert doc == normalize(text)
+    check = verify_quote("the supplier's liability shall not exceed", text, doc)
+    assert document_passage(text, offsets, check["start"], check["end"]) == "The Supplier’s  liability\nshall not exceed"

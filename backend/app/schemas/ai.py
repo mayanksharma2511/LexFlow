@@ -28,6 +28,7 @@ class Risk(BaseModel):
     severity: str
     description: str
     quote: str | None = None
+    source_text: str | None = None  # the document's own wording of the quoted passage
     verification: str | None = None  # "exact", "close" or "not_found" (see grounding.py)
     match_score: float | None = None
 

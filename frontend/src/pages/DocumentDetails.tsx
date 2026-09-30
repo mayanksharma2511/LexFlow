@@ -58,6 +58,7 @@ interface RiskItem {
   description?: string;
   recommendation?: string;
   quote?: string;
+  source_text?: string;
   verification?: string;
 }
 
@@ -998,7 +999,7 @@ function GroundedClauses({ data }: { data: Record<string, unknown> }) {
             <VerificationBadge status={clause.verification} />
           </div>
           <div className="clause-field-value">{String(clause.explanation || "")}</div>
-          <Quote text={clause.quote} />
+          <Quote text={clause.source_text || clause.quote} />
         </div>
       ))}
     </div>
@@ -1137,7 +1138,7 @@ function RiskItemCard({
         <p>{item.description}</p>
       )}
 
-      <Quote text={item.quote} />
+      <Quote text={item.source_text || item.quote} />
 
       {item.recommendation && (
         <div className="risk-recommendation">

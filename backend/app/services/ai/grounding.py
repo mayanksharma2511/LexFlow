@@ -31,22 +31,55 @@ def normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip().lower()
 
 
-def verify_quote(quote: str, document: str, normalized_document: str | None = None) -> dict:
-    """Return {"status": "exact" | "close" | "not_found", "score": 0-100, "start": int | None}.
+def normalize_with_offsets(text: str) -> tuple[str, list[int]]:
+    """Normalise like normalize() and also return, for each character of the result, the
+    position of the character it came from in the original text."""
+    chars: list[str] = []
+    offsets: list[int] = []
+    for i, ch in enumerate(text):
+        ch = _REPLACEMENTS.get(ch, ch)
+        if ch.isspace():
+            if chars and chars[-1] != " ":
+                chars.append(" ")
+                offsets.append(i)
+            continue
+        for lower in ch.lower():
+            chars.append(lower)
+            offsets.append(i)
+    if chars and chars[-1] == " ":
+        chars.pop()
+        offsets.pop()
+    return "".join(chars), offsets
 
-    `start` is the position of the match in the normalised document, when there is one.
+
+def verify_quote(quote: str, document: str, normalized_document: str | None = None) -> dict:
+    """Return {"status": "exact" | "close" | "not_found", "score": 0-100, "start", "end"}.
+
+    `start` and `end` give the matching passage in the normalised document, when there is one.
     Pass `normalized_document` when checking many quotes against the same document.
     """
     q = normalize(quote or "").strip(" .,;:\"'")
     doc = normalized_document if normalized_document is not None else normalize(document)
     if len(q) < MIN_QUOTE_CHARS or not doc:
-        return {"status": "not_found", "score": 0.0, "start": None}
+        return {"status": "not_found", "score": 0.0, "start": None, "end": None}
 
     position = doc.find(q)
     if position >= 0:
-        return {"status": "exact", "score": 100.0, "start": position}
+        return {"status": "exact", "score": 100.0, "start": position, "end": position + len(q)}
 
     alignment = fuzz.partial_ratio_alignment(q, doc, score_cutoff=CLOSE_MATCH_THRESHOLD)
     if alignment is not None:
-        return {"status": "close", "score": round(alignment.score, 1), "start": alignment.dest_start}
-    return {"status": "not_found", "score": 0.0, "start": None}
+        return {
+            "status": "close",
+            "score": round(alignment.score, 1),
+            "start": alignment.dest_start,
+            "end": alignment.dest_end,
+        }
+    return {"status": "not_found", "score": 0.0, "start": None, "end": None}
+
+
+def document_passage(document: str, offsets: list[int], start: int, end: int) -> str:
+    """The original text of the document between two positions of its normalised form."""
+    if end <= start or end > len(offsets):
+        return ""
+    return document[offsets[start]:offsets[end - 1] + 1]

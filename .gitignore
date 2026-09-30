@@ -35,3 +35,6 @@ node_modules/
 .ruff_cache/
 .mypy_cache/
 *.db
+
+# CUAD data for the evaluation (downloaded by the script)
+backend/evaluation/data/

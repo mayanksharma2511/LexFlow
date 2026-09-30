@@ -27,6 +27,8 @@ document, and LexFlow checks each quote against the text before showing it:
 - **Quote NOT found in document**: nothing matches, so the AI may have paraphrased or invented it.
   These findings are shown in red, with a warning to check them.
 
+When a quote is found, the app shows the passage in the document's own wording rather than the AI's copy of it.
+
 Clause types follow the categories of CUAD, a public dataset of contracts labelled by lawyers,
 so the extractor can be evaluated against expert labels.
 
@@ -40,6 +42,26 @@ characters in the app; longer documents are read in part, and the result says so
 On Groq's free tier (8,000 tokens per minute), LexFlow paces its calls to stay under the limit
 and waits when it is rate-limited, so a long contract can take a few minutes. Each result states
 how much of the document was read.
+
+## Evaluation on lawyer-labelled contracts
+
+`backend/evaluation/cuad_eval.py` measures clause extraction on CUAD's test contracts, comparing
+the earlier input (the first and last 3,500 characters) with reading the whole contract, using the
+same model and prompt. A labelled clause counts as found when LexFlow reports that clause type with
+a quote that is in the document and overlaps a passage the lawyers labelled.
+
+Across all 102 test contracts, only 169 of the 636 labelled clauses of these 14 types (27%) lie
+inside the first and last 3,500 characters, so the earlier version could not have found the rest.
+
+```bash
+cd backend
+python -m evaluation.cuad_eval visibility        # the figure above; no API calls
+python -m evaluation.cuad_eval run --contracts 40 # resumable; fits the free tier over a few days
+python -m evaluation.cuad_eval report             # writes evaluation/results/cuad_results.md
+```
+
+Every model reply is saved in `evaluation/results/responses.jsonl`, so the report can be
+reproduced without calling the API.
 
 ## When the AI is unavailable
 
