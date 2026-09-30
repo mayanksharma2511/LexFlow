@@ -72,7 +72,9 @@ export function CompareDocumentsModal({
       setResult(null);
 
       const response = await apiClient.post<ComparisonResult>(
-        `/ai/documents/${doc1Id}/compare/${doc2Id}`
+        `/ai/documents/${doc1Id}/compare/${doc2Id}`,
+        undefined,
+        { timeout: 180000 },
       );
 
       setResult(response.data);

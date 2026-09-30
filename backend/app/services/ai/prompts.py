@@ -1,407 +1,124 @@
-SUMMARY_PROMPT = """
-You are LexFlow AI, an expert legal document analyst.
+"""Prompts sent to the language model.
 
-Produce a professional summary in Markdown.
-
-Include:
-
-1. Purpose of the document
-2. Parties involved
-3. Important dates
-4. Main obligations or key information
-5. Risks or important observations
-6. A concise overall summary
-
-Be factual.
-Do not invent information.
-If a section is unavailable, explicitly state "Not mentioned."
+Every prompt that produces findings (clauses, risks) requires a word-for-word quote from
+the document, so that LexFlow can check each finding against the text (see grounding.py).
 """
+
+# Clause types the extractor looks for. Names follow the CUAD dataset's categories, so the
+# extractor can be evaluated against CUAD's lawyer-labelled contracts.
+CLAUSE_TYPES: dict[str, str] = {
+    "Effective Date": "The date when the contract takes effect.",
+    "Expiration Date": "When the contract's initial term ends.",
+    "Renewal Term": "How the contract renews after the initial term, including automatic renewals.",
+    "Governing Law": "Which state's or country's law governs the contract.",
+    "Termination For Convenience": "A right to end the contract without cause, usually with notice.",
+    "Anti-Assignment": "Consent or notice needed before a party can assign the contract to someone else.",
+    "Exclusivity": "An exclusive dealing commitment, or a ban on selling to or working with others.",
+    "Non-Compete": "A restriction on a party competing with the other party or operating in a market.",
+    "Cap On Liability": "A limit on the amount of damages a party can be liable for.",
+    "Insurance": "A requirement for a party to hold insurance.",
+    "Audit Rights": "A right to audit the other party's books, records or premises.",
+    "License Grant": "A licence granted by one party to the other.",
+    "Change Of Control": "Rights or consequences triggered if a party is acquired or merges.",
+    "Minimum Commitment": "A minimum amount a party must buy or pay for per period.",
+}
+
+_CLAUSE_LIST = "\n".join(f"- {name}: {description}" for name, description in CLAUSE_TYPES.items())
 
 
 CLASSIFICATION_PROMPT = """
-You are LexFlow AI, an expert legal document classifier.
+You classify legal documents. Return ONLY JSON:
 
-Return ONLY valid JSON.
+{"document_type": "", "confidence": 0.0}
 
-{
-    "document_type": "",
-    "confidence": 0.0
-}
+document_type must be one of: NDA, Employment Contract, Lease Agreement, Service Agreement,
+Purchase Agreement, License Agreement, Distribution Agreement, Invoice, Court Order, Affidavit,
+Legal Notice, Other.
 
-Possible document types:
-
-- NDA
-- Employment Contract
-- Lease Agreement
-- Service Agreement
-- Purchase Agreement
-- Invoice
-- Court Order
-- Affidavit
-- Legal Notice
-- Resume
-- Cover Letter
-- Unknown
-
-Rules:
-- Choose the single best document type.
-- Confidence must be between 0 and 1.
-- Return ONLY JSON.
+confidence is your own estimate between 0 and 1. You are given the start of the document.
 """
 
 
-GENERIC_EXTRACTION_PROMPT = """
-You are LexFlow AI.
-
-Extract structured information from the document.
-
-Return ONLY valid JSON.
-
-{
-    "parties": [],
-    "effective_date": "",
-    "termination_clause": "",
-    "payment_terms": "",
-    "governing_law": "",
-    "confidentiality": "",
-    "jurisdiction": "",
-    "summary": ""
-}
-
-Rules:
-- Never invent information.
-- If unavailable write "Not mentioned".
-- Parties must be an array.
-- Summary must be under 120 words.
+SECTION_NOTES_PROMPT = """
+You are reading one section of a longer legal document. Write brief factual notes on this
+section only: parties, dates, amounts, obligations, rights, and anything unusual. Use short
+bullet points. Do not guess about parts of the document you have not been shown.
 """
 
 
-EMPLOYMENT_PROMPT = """
-You are LexFlow AI.
+SUMMARY_PROMPT = """
+Summarise the legal document (or the notes on each of its sections) in Markdown with these
+headings: Purpose, Parties, Important dates, Main obligations, Points to review.
 
-Extract structured information from this Employment Contract.
-
-Return ONLY valid JSON.
-
-{
-    "parties": [],
-    "effective_date": "",
-    "termination_clause": "",
-    "payment_terms": "",
-    "governing_law": "",
-    "confidentiality": "",
-    "jurisdiction": "",
-    "summary": ""
-}
-
-Rules:
-- Extract only information explicitly present in the document.
-- Never invent information.
-- If unavailable write "Not mentioned".
-- Parties must be an array.
-- Summary must be under 120 words.
+Be factual and do not invent information. If something is not stated, write "Not stated".
 """
 
 
-LEASE_PROMPT = """
-You are LexFlow AI, a legal document analysis assistant.
+CLAUSE_EXTRACTION_PROMPT = f"""
+You are reading one section of a legal contract. Find the clauses of these types in THIS
+section:
 
-This document is a Lease Agreement.
+{_CLAUSE_LIST}
 
-Extract the key contractual information from the document.
+Return ONLY JSON:
 
-Return ONLY valid JSON.
-Do not include markdown, explanations, or any text outside the JSON.
-
-Use EXACTLY this structure:
-
-{
-    "parties": [],
-    "effective_date": "",
-    "termination_clause": "",
-    "payment_terms": "",
-    "governing_law": "",
-    "confidentiality": "",
-    "jurisdiction": "",
-    "summary": ""
-}
-
-FIELD RULES:
-
-1. parties
-   - Return the names and roles of the parties involved.
-   - Example:
-     ["Landlord: Arjun Mehta", "Tenant: Rohan Sharma"]
-   - Return an empty array only if no parties can be identified.
-
-2. effective_date
-   - Extract the lease commencement/effective date.
-   - Include the lease duration or expiration date if explicitly stated and useful.
-   - If unavailable, return "Not mentioned".
-
-3. termination_clause
-   - Extract the terms governing termination of the lease.
-   - Include notice periods and termination conditions where stated.
-   - If unavailable, return "Not mentioned".
-
-4. payment_terms
-   - Extract rent, security deposit, payment due dates, and other important payment obligations.
-   - Preserve amounts and currency exactly as stated.
-   - If unavailable, return "Not mentioned".
-
-5. governing_law
-   - Extract the governing law or legal rules applicable to the agreement.
-   - If unavailable, return "Not mentioned".
-
-6. confidentiality
-   - Extract any confidentiality or non-disclosure obligations.
-   - If the agreement contains no confidentiality provision, return "Not mentioned".
-
-7. jurisdiction
-   - Extract the court, jurisdiction, city, state, or other forum specified for disputes.
-   - If unavailable, return "Not mentioned".
-
-8. summary
-   - Provide a concise summary of the most important terms of the lease.
-   - Do not invent information.
-
-IMPORTANT RULES:
-
-- Extract information ONLY from the document.
-- Never invent or assume information.
-- Preserve names, dates, amounts, durations, and notice periods accurately.
-- If a field is not present, return "Not mentioned".
-- Return ONLY the JSON object.
-"""
-
-
-NDA_PROMPT = """
-You are LexFlow AI.
-
-Extract structured information from this Non-Disclosure Agreement.
-
-Return ONLY valid JSON.
-
-{
-    "parties": [],
-    "effective_date": "",
-    "termination_clause": "",
-    "payment_terms": "",
-    "governing_law": "",
-    "confidentiality": "",
-    "jurisdiction": "",
-    "summary": ""
-}
+{{
+  "parties": ["names of the parties to the contract, if this section names them"],
+  "clauses": [
+    {{"type": "one of the types above", "quote": "", "explanation": ""}}
+  ]
+}}
 
 Rules:
-- Extract only information explicitly present in the document.
-- Never invent information.
-- If unavailable write "Not mentioned".
-- Parties must be an array.
-- Summary must be under 120 words.
+- "quote" must be copied word for word from the section: the sentence or sentences that
+  contain the clause. Do not paraphrase, shorten with "...", or combine separate passages.
+- "explanation" is one short sentence in plain English.
+- Only include clauses that are actually in this section. An empty list is a valid answer.
 """
 
 
 RISK_ANALYSIS_PROMPT = """
-You are LexFlow AI.
+You are reviewing one section of a legal contract for terms a lawyer should look at closely
+(for example one-sided obligations, uncapped liability, automatic renewal, broad
+restrictions, short notice periods, or missing protections).
 
-Analyze the document for legal risks.
-
-Return ONLY valid JSON.
+Return ONLY JSON:
 
 {
-    "risk_score": 0,
-    "risk_level": "",
-    "risks": [
-        {
-            "title": "",
-            "severity": "",
-            "description": ""
-        }
-    ]
+  "risk_score": 0,
+  "risks": [
+    {"title": "", "severity": "Low", "description": "", "quote": ""}
+  ]
 }
 
 Rules:
-
-- Risk score must be between 0 and 100.
-- Risk level must be one of:
-  Low
-  Medium
-  High
-  None
-- Never invent clauses.
-- Base every identified risk on information explicitly present in the document.
-- If the document is not a legal contract, return:
-
-{
-    "risk_score": 0,
-    "risk_level": "None",
-    "risks": []
-}
-
-Return JSON only.
+- risk_score is your judgement from 0 (nothing notable) to 100 (serious concerns) for THIS section.
+- severity is Low, Medium or High.
+- "quote" must be copied word for word from the section and show the term you are describing.
+- Only report terms that are actually in this section. An empty list is a valid answer.
 """
 
 
-DOCUMENT_COMPARISON_PROMPT = """
-You are LexFlow AI, a legal document comparison assistant.
-
-Compare the OLD VERSION and NEW VERSION of the same legal document.
-
-Return ONLY valid JSON.
-Do not include markdown, explanations, or any text outside the JSON.
-
-Use exactly this structure:
-
-{
-    "summary": "",
-    "added": [
-        {
-            "old": "",
-            "new": ""
-        }
-    ],
-    "removed": [
-        {
-            "old": "",
-            "new": ""
-        }
-    ],
-    "modified": [
-        {
-            "old": "",
-            "new": ""
-        }
-    ]
-}
-
-CLASSIFICATION RULES:
-
-1. ADDED
-
-Use "added" ONLY when a completely new clause, provision, obligation, right, or condition appears in the NEW VERSION and there was no corresponding provision in the OLD VERSION.
-
-For a genuinely added clause:
-
-- "old" must be an empty string.
-- "new" must contain the newly added clause.
-
-Example:
-
-{
-    "old": "",
-    "new": "The Tenant may renew the lease for one additional year with written approval."
-}
-
-
-2. REMOVED
-
-Use "removed" ONLY when a complete clause, provision, obligation, right, or condition existed in the OLD VERSION but is completely absent from the NEW VERSION.
-
-For a genuinely removed clause:
-
-- "old" must contain the removed clause.
-- "new" must be an empty string.
-
-Example:
-
-{
-    "old": "The Tenant may keep one pet with the Landlord's approval.",
-    "new": ""
-}
-
-
-3. MODIFIED
-
-Use "modified" when a clause or term exists in BOTH versions but its wording, amount, date, duration, obligation, right, restriction, notice period, responsibility, or other substantive detail has changed.
-
-This includes:
-
-- 12 months → 18 months
-- ₹20,000 → ₹22,000
-- 60 days' notice → 30 days' notice
-- rent increases
-- security deposit changes
-- payment date changes
-- maintenance responsibility changes
-- termination conditions changing
-- renewal conditions changing
-
-For modifications:
-
-- "old" must contain the OLD VERSION wording/value.
-- "new" must contain the NEW VERSION wording/value.
-
-IMPORTANT:
-
-A changed value or changed clause is NEVER "added" or "removed" merely because the wording is different.
-
-For example, if the OLD VERSION says:
-
-"Minor repairs costing up to ₹1,000 are the Tenant's responsibility."
-
-and the NEW VERSION says:
-
-"Minor repairs costing up to ₹2,500 are the Tenant's responsibility."
-
-This MUST be classified as "modified", NOT "added" or "removed".
-
-
-4. DO NOT DUPLICATE CHANGES
-
-Each substantive change should appear in only ONE category.
-
-
-5. IGNORE COSMETIC CHANGES
-
-Do not report changes involving:
-
-- formatting
-- spacing
-- capitalization
-- punctuation
-- numbering changes
-- minor grammatical corrections
-- stylistic wording changes that do not alter legal meaning
-
-
-6. PRESERVE MEANING
-
-Do not invent information or infer changes that are not supported by the documents.
-
-
-7. SUMMARY
-
-The summary should briefly describe the most important substantive changes between the two versions.
-
-
-8. EMPTY ARRAYS
-
-If there are no changes in a category, return an empty array.
-
-Return ONLY the JSON object.
+COMPARISON_SUMMARY_PROMPT = """
+You are given the passages that differ between an old and a new version of a legal document
+(found by a text comparison). Summarise in at most five sentences what changed and why it
+might matter. Only describe the changes you are shown.
 """
+
 
 CASE_SYNTHESIS_PROMPT = """
-You are LexFlow AI, a senior legal risk analyst.
-
-Analyze all documents associated with this legal matter/case.
-
-Return ONLY valid JSON.
+You are given summaries of the documents in a legal case. Return ONLY JSON:
 
 {
-    "overall_risk_score": 0,
-    "overall_risk_level": "Low",
-    "executive_summary": "",
-    "key_issues": [],
-    "recommended_actions": []
+  "overall_risk_score": 0,
+  "overall_risk_level": "Low",
+  "executive_summary": "",
+  "key_issues": [],
+  "recommended_actions": []
 }
 
 Rules:
-- overall_risk_score must be between 0 and 100.
-- overall_risk_level must be one of: Low, Medium, High.
-- executive_summary must summarize the overall case exposure in under 150 words.
-- key_issues must list key legal exposures.
-- recommended_actions must list strategic legal steps for counsel.
-- Return ONLY JSON.
+- overall_risk_score is your judgement from 0 to 100; overall_risk_level is Low, Medium or High.
+- executive_summary is under 150 words.
+- key_issues and recommended_actions must be based only on the summaries you are given.
 """

@@ -57,6 +57,8 @@ interface RiskItem {
   severity?: string;
   description?: string;
   recommendation?: string;
+  quote?: string;
+  verification?: string;
 }
 
 function DocumentDetails() {
@@ -152,7 +154,9 @@ function DocumentDetails() {
           break;
       }
 
-      await apiClient.post(endpoint);
+      // Long documents are read section by section at the AI service's free-tier pace,
+      // which can take several minutes, so allow up to 10 minutes.
+      await apiClient.post(endpoint, undefined, { timeout: 600000 });
 
       const response =
         await apiClient.get<Analysis[]>(
@@ -349,7 +353,7 @@ function DocumentDetails() {
           {analyzing && (
             <span className="analysis-running">
               <Loader2 size={14} />
-              Analyzing...
+              Reading the whole document. Long documents can take a few minutes.
             </span>
           )}
         </div>
@@ -768,6 +772,10 @@ function formatClauseResult(
       ? (value.data as Record<string, unknown>)
       : value;
 
+  if (Array.isArray(data.clauses)) {
+    return <GroundedClauses data={data} />;
+  }
+
   const entries = Object.entries(data).filter(
     ([key]) =>
       key !== "document_type" &&
@@ -919,6 +927,84 @@ function ClauseField({
   );
 }
 
+
+/* =========================================================
+   GROUNDED RESULTS (every finding carries a checked quote)
+========================================================= */
+
+const VERIFICATION_LABELS: Record<string, { text: string; color: string; background: string }> = {
+  exact: { text: "Quote found in document", color: "#4ade80", background: "rgba(34, 197, 94, 0.15)" },
+  close: { text: "Quote found (minor differences)", color: "#a3e635", background: "rgba(132, 204, 22, 0.15)" },
+  not_found: { text: "Quote NOT found in document", color: "#f87171", background: "rgba(239, 68, 68, 0.15)" },
+};
+
+function VerificationBadge({ status }: { status: unknown }) {
+  const label = VERIFICATION_LABELS[String(status)];
+  if (!label) return null;
+  return (
+    <span style={{ fontSize: "11px", fontWeight: 600, padding: "2px 8px", borderRadius: "10px", color: label.color, background: label.background }}>
+      {label.text}
+    </span>
+  );
+}
+
+function Quote({ text }: { text: unknown }) {
+  if (!text) return null;
+  return (
+    <blockquote style={{ margin: "8px 0 0", padding: "8px 12px", borderLeft: "3px solid #c9a96e", color: "#cbd5e1", fontSize: "13px", background: "rgba(255,255,255,0.03)" }}>
+      {String(text)}
+    </blockquote>
+  );
+}
+
+function CoverageNote({ coverage }: { coverage: unknown }) {
+  if (!coverage || typeof coverage !== "object") return null;
+  const c = coverage as { characters: number; characters_read: number; sections: number; sections_read: number };
+  const whole = c.sections_read >= c.sections;
+  return (
+    <div className="analysis-json-key" style={{ marginBottom: "12px" }}>
+      {whole
+        ? `Read the whole document: ${c.characters.toLocaleString()} characters in ${c.sections} section(s).`
+        : `Read the first ${c.characters_read.toLocaleString()} of ${c.characters.toLocaleString()} characters (${c.sections_read} of ${c.sections} sections).`}
+    </div>
+  );
+}
+
+function GroundedClauses({ data }: { data: Record<string, unknown> }) {
+  const clauses = (data.clauses as Array<Record<string, unknown>>) || [];
+  const parties = Array.isArray(data.parties) ? (data.parties as unknown[]) : [];
+  const unverified = clauses.filter((c) => c.verification === "not_found").length;
+  return (
+    <div className="clause-result">
+      <CoverageNote coverage={data.coverage} />
+      {parties.length > 0 && (
+        <div className="clause-field">
+          <div className="clause-field-heading"><Users size={15} /><span>Parties</span></div>
+          <div className="party-list">
+            {parties.map((p, i) => <div className="party-item" key={i}><strong>{String(p)}</strong></div>)}
+          </div>
+        </div>
+      )}
+      {clauses.length === 0 && <div className="clause-field-value">No clauses of the tracked types were found.</div>}
+      {unverified > 0 && (
+        <div className="risk-empty" style={{ marginBottom: "12px" }}>
+          <AlertTriangle size={13} /> {unverified} finding(s) quote text that could not be found in the document. Check them before relying on them.
+        </div>
+      )}
+      {clauses.map((clause, i) => (
+        <div className="clause-field" key={i}>
+          <div className="clause-field-heading" style={{ justifyContent: "space-between", display: "flex", gap: "8px" }}>
+            <span>{String(clause.type)}</span>
+            <VerificationBadge status={clause.verification} />
+          </div>
+          <div className="clause-field-value">{String(clause.explanation || "")}</div>
+          <Quote text={clause.quote} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /* =========================================================
    RISK ANALYSIS
 ========================================================= */
@@ -952,6 +1038,7 @@ function formatRiskResult(
 
   return (
     <div className="risk-result">
+      <CoverageNote coverage={value.coverage} />
       <div className="risk-overview">
         <div className="risk-score-block">
           <span className="analysis-json-key">
@@ -965,7 +1052,7 @@ function formatRiskResult(
           </strong>
 
           <span className="risk-score-caption">
-            out of 100
+            out of 100 (the AI's judgement)
           </span>
         </div>
 
@@ -1039,9 +1126,7 @@ function RiskItemCard({
           {severity}
         </span>
 
-        <span className="risk-item-icon">
-          <AlertTriangle size={14} />
-        </span>
+        <VerificationBadge status={item.verification} />
       </div>
 
       <h4>
@@ -1051,6 +1136,8 @@ function RiskItemCard({
       {item.description && (
         <p>{item.description}</p>
       )}
+
+      <Quote text={item.quote} />
 
       {item.recommendation && (
         <div className="risk-recommendation">

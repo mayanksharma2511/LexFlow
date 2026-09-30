@@ -27,6 +27,9 @@ class Risk(BaseModel):
     title: str
     severity: str
     description: str
+    quote: str | None = None
+    verification: str | None = None  # "exact", "close" or "not_found" (see grounding.py)
+    match_score: float | None = None
 
 
 class RiskAnalysisResponse(BaseModel):
@@ -34,6 +37,7 @@ class RiskAnalysisResponse(BaseModel):
     risk_level: str
     risks: list[Risk]
     note: str | None = None
+    coverage: dict[str, int] | None = None
 
 
 class ComparisonChange(BaseModel):

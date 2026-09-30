@@ -96,12 +96,12 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
           </div>
 
           <div>
-            <label style={labelStyle}>File Attachment (PDF, DOCX, PNG, JPG)</label>
+            <label style={labelStyle}>File Attachment (PDF, DOCX, TXT, PNG, JPG)</label>
             <div style={dropzoneStyle}>
               <input
                 required
                 type="file"
-                accept=".pdf,.docx,.png,.jpg,.jpeg"
+                accept=".pdf,.docx,.txt,.png,.jpg,.jpeg"
                 onChange={handleFileChange}
                 style={{ display: 'none' }}
                 id="doc-upload-file-input"
@@ -112,7 +112,7 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
                   {file ? file.name : 'Click or drag file to upload'}
                 </div>
                 <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
-                  {file ? `${(file.size / (1024 * 1024)).toFixed(2)} MB` : 'PDF, DOCX, PNG, JPG (Max 20MB)'}
+                  {file ? `${(file.size / (1024 * 1024)).toFixed(2)} MB` : 'PDF, DOCX, TXT, PNG, JPG (Max 20MB)'}
                 </div>
               </label>
             </div>

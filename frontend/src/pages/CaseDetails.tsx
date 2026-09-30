@@ -154,7 +154,7 @@ function CaseDetails() {
     setLoadingSynthesis(true);
     setSynthesisError("");
     try {
-      const res = await apiClient.post<CaseAISynthesis>(`/ai/cases/${caseId}/synthesis`);
+      const res = await apiClient.post<CaseAISynthesis>(`/ai/cases/${caseId}/synthesis`, undefined, { timeout: 900000 });
       setAiSynthesis(res.data);
     } catch (err: unknown) {
       console.error("Failed to run case synthesis", err);

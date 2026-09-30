@@ -477,13 +477,8 @@ class AIAnalysisService:
                 "recommended_actions": ["Upload legal documents to initiate AI case synthesis."],
             }
 
-        texts = []
-        for doc in documents:
-            if doc.extracted_text and doc.extracted_text.strip():
-                texts.append(f"--- DOCUMENT: {doc.file_name} ---\n{doc.extracted_text[:4000]}")
-
-        combined_text = "\n\n".join(texts)
-        if not combined_text.strip():
+        readable = [doc for doc in documents if doc.extracted_text and doc.extracted_text.strip()]
+        if not readable:
             return {
                 "overall_risk_score": None,
                 "overall_risk_level": "Not available",
@@ -493,7 +488,18 @@ class AIAnalysisService:
             }
 
         try:
-            raw_res = llm_service.synthesize_case(case.title, combined_text)
+            # Work from each document's summary (reusing a saved one when it exists), so every
+            # document is represented in full rather than by its first few thousand characters.
+            summaries: list[tuple[str, str]] = []
+            for doc in readable:
+                saved = ai_analysis_repository.get_by_document_and_type(db, doc.id, "summary")
+                if saved and saved.result and not saved.result.startswith("### AI summary unavailable"):
+                    summaries.append((doc.file_name, saved.result))
+                else:
+                    summary = llm_service.summarize(doc.extracted_text or "")
+                    self._save_analysis(db, doc.id, "summary", summary)
+                    summaries.append((doc.file_name, summary))
+            raw_res = llm_service.synthesize_case(case.title, summaries)
         except Exception as exc:
             logger.warning("Case synthesis degraded gracefully for case '%s': %s", case_id, exc)
             case.error_message = str(exc)
