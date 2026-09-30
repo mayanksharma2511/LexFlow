@@ -38,3 +38,6 @@ node_modules/
 
 # CUAD data for the evaluation (downloaded by the script)
 backend/evaluation/data/
+
+# Trained clause classifier (created by python -m evaluation.clause_classifier)
+backend/ml/

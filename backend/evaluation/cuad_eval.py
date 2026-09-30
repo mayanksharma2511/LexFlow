@@ -29,6 +29,7 @@ import hashlib
 import io
 import json
 import random
+import re
 import sys
 import urllib.request
 import zipfile
@@ -67,10 +68,12 @@ class StopRun(Exception):
 
 # ----- Data -----
 
-def download_cuad() -> None:
-    """Download CUAD's test split (102 contracts) into evaluation/data/."""
-    if DATA_FILE.exists():
-        return
+def download_cuad(member: str = "test.json") -> Path:
+    """Download a file from the CUAD archive into evaluation/data/ (once) and return its path.
+    test.json holds the 102 test contracts; train_separate_questions.json the 408 training ones."""
+    path = DATA_FILE.parent / member
+    if path.exists():
+        return path
     print(f"Downloading CUAD from {CUAD_URL} ...")
     try:
         with urllib.request.urlopen(CUAD_URL, timeout=120) as response:  # noqa: S310 (fixed https URL)
@@ -78,25 +81,34 @@ def download_cuad() -> None:
     except OSError as exc:
         sys.exit(
             f"Could not download CUAD ({exc}). Download it with:\n"
-            f"  curl -L -o /tmp/cuad.zip {CUAD_URL} && unzip -o -j /tmp/cuad.zip test.json -d {DATA_FILE.parent}"
+            f"  curl -L -o /tmp/cuad.zip {CUAD_URL} && unzip -o -j /tmp/cuad.zip {member} -d {DATA_FILE.parent}"
         )
-    DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
-    DATA_FILE.write_bytes(archive.read("test.json"))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(archive.read(member))
+    return path
 
 
-def load_contracts() -> list[dict]:
+def load_contracts(member: str = "test.json") -> list[dict]:
     """Each contract: title, text, and the lawyer-labelled spans for LexFlow's clause types."""
-    download_cuad()
+    path = download_cuad(member)
     contracts = []
-    for entry in json.loads(DATA_FILE.read_text())["data"]:
+    for entry in json.loads(path.read_text())["data"]:
         paragraph = entry["paragraphs"][0]
-        gold: dict[str, list[tuple[int, int]]] = {}
+        gold: dict[str, set[tuple[int, int]]] = {}
         for qa in paragraph["qas"]:
+            # Test questions are named "...__Governing Law"; training ones "...__Governing Law_0".
             clause_type = qa["id"].split("__")[-1]
+            if clause_type not in CLAUSE_TYPES:
+                clause_type = re.sub(r"_\d+$", "", clause_type)
             if clause_type in CLAUSE_TYPES and qa["answers"]:
-                spans = {(a["answer_start"], a["answer_start"] + len(a["text"])) for a in qa["answers"]}
-                gold[clause_type] = sorted(spans)
-        contracts.append({"title": entry["title"], "text": paragraph["context"], "gold": gold})
+                gold.setdefault(clause_type, set()).update(
+                    (a["answer_start"], a["answer_start"] + len(a["text"])) for a in qa["answers"]
+                )
+        contracts.append({
+            "title": entry["title"],
+            "text": paragraph["context"],
+            "gold": {t: sorted(spans) for t, spans in gold.items()},
+        })
     return contracts
 
 
@@ -209,17 +221,19 @@ def run(n_contracts: int) -> None:
 
 # ----- Scoring -----
 
-def _overlaps(a: tuple[int, int], b: tuple[int, int]) -> bool:
-    overlap = min(a[1], b[1]) - max(a[0], b[0])
-    shorter = min(a[1] - a[0], b[1] - b[0])
-    return shorter > 0 and overlap >= MIN_OVERLAP * shorter
+def _overlaps(finding: tuple[int, int], label: tuple[int, int], strict: bool = False) -> bool:
+    """Does a finding match a labelled passage? By default the overlap must cover at least half
+    of the shorter of the two; with strict=True, at least half of the finding itself."""
+    overlap = min(finding[1], label[1]) - max(finding[0], label[0])
+    base = finding[1] - finding[0] if strict else min(finding[1] - finding[0], label[1] - label[0])
+    return base > 0 and overlap > 0 and overlap >= MIN_OVERLAP * base
 
 
 def _to_normalized(offsets: list[int], span: tuple[int, int]) -> tuple[int, int]:
     return bisect.bisect_left(offsets, span[0]), bisect.bisect_left(offsets, span[1])
 
 
-def score_contract(contract: dict, predictions: list[dict]) -> dict:
+def score_contract(contract: dict, predictions: list[dict], strict: bool = False) -> dict:
     """Per clause type: predictions, correct predictions, quotes not found, and whether the
     lawyer-labelled clause was found."""
     text = contract["text"]
@@ -241,7 +255,7 @@ def score_contract(contract: dict, predictions: list[dict]) -> dict:
             continue
         seen.add((p["type"], *span))
         r["predicted"] += 1
-        hits = [i for i, g in enumerate(gold.get(p["type"], [])) if _overlaps(span, g)]
+        hits = [i for i, g in enumerate(gold.get(p["type"], [])) if _overlaps(span, g, strict)]
         if hits:
             r["correct"] += 1
             r["found"] = True

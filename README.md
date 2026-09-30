@@ -1,5 +1,7 @@
 # LexFlow
 
+[![CI](https://github.com/mayanksharma2511/LexFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/mayanksharma2511/LexFlow/actions/workflows/ci.yml)
+
 LexFlow is a web application for managing legal cases and analysing their documents with a large language model. You create a case, upload contracts or other documents (PDF, Word, text or images), and LexFlow extracts their text and can summarise them, classify them, pull out key clauses, flag risks, and compare two versions of a document.
 
 I built it as an independent project after friends doing law internships kept sending me documents to analyse with separate AI tools for each task.
@@ -63,12 +65,31 @@ python -m evaluation.cuad_eval report             # writes evaluation/results/cu
 Every model reply is saved in `evaluation/results/responses.jsonl`, so the report can be
 reproduced without calling the API.
 
+### A trained baseline
+
+`backend/evaluation/clause_classifier.py` trains a classifier for the same 14 clause types on
+CUAD's 408 training contracts (TF-IDF features and one logistic regression per type, with each
+type's threshold tuned on a validation split of the training contracts). The test contracts are
+never used for training or tuning, and the classifier's findings are scored with exactly the same
+rule as the LLM's.
+
+On all 102 test contracts it finds 538 of the 636 labelled clauses (85%), in about 0.01 seconds per
+contract and with no API calls. The results file also checks for near-duplicate contracts between
+the training and test sets (1 found; without it the classifier finds 84%) and repeats the scoring
+with a stricter matching rule (78%). Results: `evaluation/results/classifier_results.md`.
+Retraining on a different machine can move these figures by about a percentage point, because
+library builds differ slightly in their floating-point arithmetic.
+
+```bash
+python -m evaluation.clause_classifier   # a few minutes on a laptop; saves backend/ml/clause_classifier.joblib
+```
+
 ## When the AI is unavailable
 
 If a call still fails, LexFlow **says so** instead of inventing a result:
 
 - a risk analysis that could not run is shown as **"Not available"**, never as low risk;
-- classification and clause extraction fall back to simple text rules (keywords, dates, "between X and Y", "governed by the laws of…"), clearly labelled as rule-based and without a confidence score;
+- clause extraction falls back to the trained classifier above (when it has been trained), whose findings are quote-checked like the AI's; without it, and for classification, LexFlow uses simple text rules (keywords, dates, "between X and Y", "governed by the laws of…"). Both are labelled as such and carry no confidence score;
 - summaries fall back to the document's own opening lines, labelled as such;
 - document comparison still lists the exact changes, without the AI summary.
 
@@ -84,9 +105,9 @@ and the app labels them that way; they have not been measured.
 ## Tech stack
 
 - **Backend:** Python, FastAPI, SQLAlchemy, PostgreSQL, Pydantic
-- **AI and text extraction:** Groq API (gpt-oss-20b by default), RapidFuzz for quote checking, PyMuPDF, Tesseract OCR
+- **AI and text extraction:** Groq API (gpt-oss-20b by default), scikit-learn (trained clause classifier), RapidFuzz for quote checking, PyMuPDF, Tesseract OCR
 - **Frontend:** React, TypeScript, Vite
-- **Tooling:** pytest, Ruff, mypy, Docker Compose, Nginx
+- **Tooling:** pytest, Ruff, mypy, GitHub Actions, Docker Compose, Nginx
 
 ## Running locally
 
@@ -118,8 +139,9 @@ SECRET_KEY=test DATABASE_URL=sqlite:///./test.db pytest
 
 The tests never call the real AI service (they switch it off, so they cost no API quota). They cover
 access control between users, quote checking, reading every section of a long document, merging
-results, the fallbacks (a failed analysis must never look like a real result), document comparison
-and keyword search. The frontend is type-checked with `npx tsc --noEmit -p tsconfig.app.json`.
+results, the fallbacks (a failed analysis must never look like a real result), the trained classifier,
+the evaluation's scoring, document comparison and keyword search. GitHub Actions runs the tests, Ruff
+and mypy for the backend, and ESLint, the TypeScript check and the build for the frontend, on every push.
 
 ## Repository structure
 
@@ -128,6 +150,7 @@ backend/app/api/        API endpoints
 backend/app/services/   business logic; services/ai/ holds the LLM calls, prompts, quote checking and search
 backend/app/models/     database models (SQLAlchemy; tables are created when the app starts)
 backend/app/tests/      tests
+backend/evaluation/     CUAD evaluation of the LLM and the trained classifier, with saved results
 frontend/src/           React app (pages/, components/, api/)
 ```
 

@@ -774,7 +774,12 @@ function formatClauseResult(
       : value;
 
   if (Array.isArray(data.clauses)) {
-    return <GroundedClauses data={data} />;
+    return (
+      <>
+        <FallbackNote note={value.note} />
+        <GroundedClauses data={data} />
+      </>
+    );
   }
 
   const entries = Object.entries(data).filter(

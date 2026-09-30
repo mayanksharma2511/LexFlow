@@ -11,7 +11,8 @@ from app.models.document import Document
 from app.repositories.ai_analysis import ai_analysis_repository
 from app.repositories.case import case_repository
 from app.repositories.document import document_repository
-from app.services.ai.llm_service import llm_service
+from app.services.ai.clause_classifier import find_clauses
+from app.services.ai.llm_service import _verify_items, llm_service, split_into_sections
 from app.services.audit_log import audit_log_service
 
 logger = logging.getLogger(__name__)
@@ -70,21 +71,56 @@ def generate_fallback_classification(extracted_text: str | None) -> dict:
     }
 
 
-def generate_fallback_clauses(extracted_text: str | None) -> dict:
-    """Pull out only what simple patterns can find (parties, dates, governing law) when the
-    AI service is unavailable. Anything not found is left out rather than filled in."""
-    text = extracted_text or ""
-    data: dict[str, Any] = {}
+CLASSIFIER_NOTE = (
+    "The AI service was unavailable, so these clauses were found by LexFlow's own classifier, "
+    "trained on contracts labelled by lawyers (CUAD). It finds passages but does not explain them."
+)
 
-    parties: list[str] = []
-    # "between X and Y" (the usual opening of a contract): take both sides
+
+def generate_fallback_clauses(extracted_text: str | None) -> dict:
+    """Clauses found without the AI service: by the trained classifier when it is available,
+    otherwise by simple text patterns. Anything not found is left out rather than filled in."""
+    text = extracted_text or ""
+    found = find_clauses(text) if text.strip() else None
+    if found is not None:
+        clauses = [
+            {"type": f["type"], "quote": f["quote"],
+             "explanation": "Found by LexFlow's trained classifier (no AI explanation available)."}
+            for f in found
+        ]
+        sections = split_into_sections(text)
+        return {
+            "document_type": "Unknown",
+            "confidence": None,
+            "method": "trained classifier",
+            "note": CLASSIFIER_NOTE,
+            "data": {
+                "parties": _parties(text),
+                "clauses": _verify_items(clauses, text),
+                "coverage": {"characters": len(text), "characters_read": len(text),
+                             "sections": len(sections), "sections_read": len(sections)},
+            },
+        }
+    return _pattern_clauses(text)
+
+
+def _parties(text: str) -> list[str]:
+    """The two sides of "between X and Y", the usual opening of a contract."""
     pair = re.search(
         r"(?:by and between|between)\s+([A-Z][^\n]{2,80}?)\s+and\s+([A-Z][^\n]{2,80}?)"
         r"(?=\s*(?:[\.,;(\n]|$|\b(?:dated|as of|effective|whereby|each)\b))",
         text,
     )
-    if pair:
-        parties = [p.strip(" ,") for p in pair.groups() if 2 < len(p.strip(" ,")) < 100]
+    if not pair:
+        return []
+    return [p.strip(" ,") for p in pair.groups() if 2 < len(p.strip(" ,")) < 100]
+
+
+def _pattern_clauses(text: str) -> dict:
+    """What simple patterns can find (parties, dates, governing law) when no classifier is available."""
+    data: dict[str, Any] = {}
+
+    parties = _parties(text)
     if parties:
         data["parties"] = parties
 
