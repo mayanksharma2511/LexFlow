@@ -162,11 +162,15 @@ def _row(name: str, scores: list[dict]) -> str:
             f"| {_pct(_rate(t['correct'], t['predicted']))} of {t['predicted']} |")
 
 
-def llm_scores(contracts: list[dict], strict: bool = False) -> tuple[list[dict], dict[str, list[dict]]]:
-    """The contracts the LLM has finished in both modes, and its scores on them."""
+def llm_scores(
+    contracts: list[dict], strict: bool = False, bundle: dict | None = None
+) -> tuple[list[dict], dict[str, list[dict]]]:
+    """The contracts the LLM has finished in both modes, and its scores on them. With a classifier
+    bundle, also scores the LLM's whole-contract findings and the classifier's findings together
+    ("both")."""
     cache = load_cache()
     finished: list[dict] = []
-    scores: dict[str, list[dict]] = {m: [] for m in MODES}
+    scores: dict[str, list[dict]] = {m: [] for m in (*MODES, "both")}
     for c in sample_order(contracts):
         keys = {m: [_key(x) for x in model_inputs(c["text"], m)] for m in MODES}
         if all(k in cache for m in MODES for k in keys[m]):
@@ -176,6 +180,8 @@ def llm_scores(contracts: list[dict], strict: bool = False) -> tuple[list[dict],
                 for k in keys[m]:
                     predictions.extend(parse_reply(cache[k]) or [])
                 scores[m].append(score_contract(c, predictions, strict))
+                if m == "whole" and bundle is not None:
+                    scores["both"].append(score_contract(c, predictions + find_in(bundle, c["text"]), strict))
     return finished, scores
 
 
@@ -191,7 +197,7 @@ def near_duplicates(test: list[dict], train_contracts: list[dict]) -> list[bool]
 def report(bundle: dict) -> None:
     test = load_contracts()
     all_scores, seconds = score_classifier(bundle, test)
-    finished, llm = llm_scores(test)
+    finished, llm = llm_scores(test, bundle=bundle)
     clf_scores, _ = score_classifier(bundle, finished)
 
     lines = [
@@ -219,6 +225,7 @@ def report(bundle: dict) -> None:
             _row("Trained classifier (no API calls)", clf_scores),
             _row("LLM, first and last 3,500 characters", llm["start_and_end"]),
             _row("LLM, whole contract in sections", llm["whole"]),
+            _row("LLM (whole contract) and classifier together", llm["both"]),
             "",
             f"Classifier minus LLM (whole contract), labelled clauses found: 95% bootstrap interval over contracts "
             f"{100 * low:+.0f} to {100 * high:+.0f} percentage points.",
@@ -242,11 +249,12 @@ def report(bundle: dict) -> None:
     )
     if finished:
         strict_clf, _ = score_classifier(bundle, finished, strict=True)
-        _, strict_llm = llm_scores(test, strict=True)
-        c, w = _totals(strict_clf), _totals(strict_llm["whole"])
+        _, strict_llm = llm_scores(test, strict=True, bundle=bundle)
+        c, w, b = _totals(strict_clf), _totals(strict_llm["whole"]), _totals(strict_llm["both"])
         lines.append(
             f"  On the {len(finished)} finished contracts: classifier {_pct(_rate(c['found'], c['labelled']))}, "
-            f"LLM (whole contract) {_pct(_rate(w['found'], w['labelled']))}."
+            f"LLM (whole contract) {_pct(_rate(w['found'], w['labelled']))}, "
+            f"both together {_pct(_rate(b['found'], b['labelled']))}."
         )
     lengths = [len(f["quote"]) for c in test for f in find_in(bundle, c["text"])]
     lines += [

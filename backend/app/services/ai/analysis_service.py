@@ -12,7 +12,9 @@ from app.repositories.ai_analysis import ai_analysis_repository
 from app.repositories.case import case_repository
 from app.repositories.document import document_repository
 from app.services.ai.clause_classifier import find_clauses
+from app.services.ai.grounding import normalize_with_offsets, verify_quote
 from app.services.ai.llm_service import _verify_items, llm_service, split_into_sections
+from app.services.ai.prompts import CLAUSE_TYPES
 from app.services.audit_log import audit_log_service
 
 logger = logging.getLogger(__name__)
@@ -96,7 +98,7 @@ def generate_fallback_clauses(extracted_text: str | None) -> dict:
             "note": CLASSIFIER_NOTE,
             "data": {
                 "parties": _parties(text),
-                "clauses": _verify_items(clauses, text),
+                "clauses": [{**c, "source": "classifier"} for c in _verify_items(clauses, text)],
                 "coverage": {"characters": len(text), "characters_read": len(text),
                              "sections": len(sections), "sections_read": len(sections)},
             },
@@ -144,6 +146,55 @@ def _pattern_clauses(text: str) -> dict:
         "note": AI_UNAVAILABLE_NOTE,
         "data": data,
     }
+
+
+CLASSIFIER_ONLY_NOTE = "Found by LexFlow's trained classifier; the AI did not report this passage."
+
+
+def _spans_overlap(a: tuple[int, int], b: tuple[int, int]) -> bool:
+    """The same rule the evaluation uses: the overlap covers at least half of the shorter span."""
+    overlap = min(a[1], b[1]) - max(a[0], b[0])
+    shorter = min(a[1] - a[0], b[1] - b[0])
+    return shorter > 0 and overlap >= 0.5 * shorter
+
+
+def add_classifier_findings(text: str, result: dict) -> dict:
+    """Combine the AI's clauses with the trained classifier's.
+
+    On lawyer-labelled contracts the two found different clauses, and together they found more
+    than either alone (see the README). Each clause is marked with where it came from:
+    "ai", "classifier", or "both" when the classifier found the same passage as the AI.
+    Without a trained classifier the AI's result is returned unchanged.
+    """
+    data = result.get("data")
+    if not isinstance(data, dict) or not isinstance(data.get("clauses"), list):
+        return result
+    found = find_clauses(text) if text.strip() else None
+    if found is None:
+        return result
+
+    doc, _ = normalize_with_offsets(text)
+
+    def span(quote: str) -> tuple[int, int] | None:
+        check = verify_quote(quote, text, doc)
+        return (check["start"], check["end"]) if check["start"] is not None else None
+
+    clauses = [{**c, "source": "ai"} for c in data["clauses"]]
+    ai_spans = [span(str(c.get("quote") or "")) for c in clauses]
+    extra = []
+    for f in found:
+        f_span = span(f["quote"])
+        matched = False
+        for clause, a_span in zip(clauses, ai_spans):
+            if clause.get("type") == f["type"] and a_span and f_span and _spans_overlap(a_span, f_span):
+                clause["source"] = "both"
+                matched = True
+        if not matched:
+            extra.append({"type": f["type"], "quote": f["quote"], "explanation": CLASSIFIER_ONLY_NOTE})
+    clauses += [{**c, "source": "classifier"} for c in _verify_items(extra, text)]
+    order = {t: i for i, t in enumerate(CLAUSE_TYPES)}
+    clauses.sort(key=lambda c: order.get(str(c.get("type")), len(order)))
+    return {**result, "data": {**data, "clauses": clauses, "combined_with_classifier": True}}
 
 
 def unavailable_risk_result(reason: str) -> dict:
@@ -338,6 +389,8 @@ class AIAnalysisService:
         except Exception as exc:
             self._handle_analysis_error(db, document, exc)
             result = generate_fallback_clauses(document.extracted_text)
+        else:
+            result = add_classifier_findings(document.extracted_text or "", result)
 
         analysis = self._save_analysis(
             db,

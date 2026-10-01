@@ -8,21 +8,22 @@ TF-IDF and logistic regression, trained on CUAD's 408 training contracts (102,63
 |---|---|---|
 | Trained classifier | 538 of 636 (85%) | 69% of 861 |
 
-## Compared with the LLM on the 15 contracts it has finished
+## Compared with the LLM on the 40 contracts it has finished
 
 | Method | Labelled clauses found | Findings that match a label |
 |---|---|---|
-| Trained classifier (no API calls) | 64 of 81 (79%) | 70% of 109 |
-| LLM, first and last 3,500 characters | 19 of 81 (23%) | 66% of 29 |
-| LLM, whole contract in sections | 56 of 81 (69%) | 64% of 105 |
+| Trained classifier (no API calls) | 181 of 218 (83%) | 69% of 297 |
+| LLM, first and last 3,500 characters | 51 of 218 (23%) | 61% of 84 |
+| LLM, whole contract in sections | 162 of 218 (74%) | 67% of 270 |
+| LLM (whole contract) and classifier together | 201 of 218 (92%) | 67% of 541 |
 
-Classifier minus LLM (whole contract), labelled clauses found: 95% bootstrap interval over contracts -5 to +28 percentage points.
+Classifier minus LLM (whole contract), labelled clauses found: 95% bootstrap interval over contracts +1 to +17 percentage points.
 
 ## Checks
 
 - **Near-duplicate contracts.** 1 test contract(s) closely match a training contract (cosine similarity of at least 0.9). Without them the classifier finds 84% of labelled clauses.
 - **Stricter matching** (at least half of each finding must lie inside the labelled passage): the classifier finds 78% of labelled clauses on all test contracts.
-  On the 15 finished contracts: classifier 72%, LLM (whole contract) 63%.
+  On the 40 finished contracts: classifier 77%, LLM (whole contract) 67%, both together 87%.
 - **Finding length.** Median 235 characters per classifier finding, so it is not matching labels by returning long stretches of text.
 
 ## By clause type (all test contracts)

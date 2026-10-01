@@ -51,3 +51,34 @@ def test_fallback_uses_the_classifier_and_checks_its_quotes(tiny_model) -> None:
 
 def test_without_a_trained_model_the_fallback_uses_text_patterns() -> None:
     assert generate_fallback_clauses(TEXT)["method"] == "text patterns"
+
+
+def test_ai_and_classifier_findings_are_combined_and_labelled(tiny_model) -> None:  # noqa: ANN001
+    from app.services.ai.analysis_service import add_classifier_findings
+    from app.services.ai.llm_service import _verify_items
+
+    ai_clauses = _verify_items([
+        {"type": "Governing Law", "quote": "governed by the laws of the State of New York", "explanation": "New York law."},
+        {"type": "Anti-Assignment", "quote": "Invoices are payable within thirty days of receipt", "explanation": "x"},
+    ], TEXT)
+    result = {"document_type": "Supply", "data": {"parties": [], "clauses": ai_clauses}}
+    combined = add_classifier_findings(TEXT, result)["data"]
+    by_type = {c["type"]: c for c in combined["clauses"]}
+    assert by_type["Governing Law"]["source"] == "both"      # the classifier found the same passage
+    assert by_type["Anti-Assignment"]["source"] == "ai"      # only the AI reported it
+    assert combined["combined_with_classifier"] is True
+    assert len(combined["clauses"]) == 2                     # no duplicate for the shared clause
+
+
+def test_classifier_only_findings_are_added(tiny_model) -> None:  # noqa: ANN001
+    from app.services.ai.analysis_service import add_classifier_findings
+
+    combined = add_classifier_findings(TEXT, {"data": {"parties": [], "clauses": []}})["data"]["clauses"]
+    assert [(c["type"], c["source"], c["verification"]) for c in combined] == [("Governing Law", "classifier", "exact")]
+
+
+def test_without_a_trained_classifier_the_ai_result_is_unchanged() -> None:
+    from app.services.ai.analysis_service import add_classifier_findings
+
+    result: dict = {"data": {"parties": [], "clauses": []}}
+    assert add_classifier_findings(TEXT, result) is result

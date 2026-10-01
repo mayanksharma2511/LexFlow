@@ -80,6 +80,10 @@ with a stricter matching rule (78%). Results: `evaluation/results/classifier_res
 Retraining on a different machine can move these figures by about a percentage point, because
 library builds differ slightly in their floating-point arithmetic.
 
+CUAD's contracts are American commercial agreements filed with the SEC, so the classifier may do
+worse on other kinds of documents (leases, court orders or contracts from other countries), which it
+has never seen; the language model does not depend on these training examples.
+
 ```bash
 python -m evaluation.clause_classifier   # a few minutes on a laptop; saves backend/ml/clause_classifier.joblib
 ```

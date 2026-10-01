@@ -976,6 +976,22 @@ function CoverageNote({ coverage }: { coverage: unknown }) {
   );
 }
 
+const SOURCE_LABELS: Record<string, string> = {
+  both: "Found by AI and classifier",
+  ai: "Found by AI",
+  classifier: "Found by classifier only",
+};
+
+function SourceLabel({ source }: { source: unknown }) {
+  const text = SOURCE_LABELS[String(source)];
+  if (!text) return null;
+  return (
+    <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 500 }}>
+      {text}
+    </span>
+  );
+}
+
 function GroundedClauses({ data }: { data: Record<string, unknown> }) {
   const clauses = (data.clauses as Array<Record<string, unknown>>) || [];
   const parties = Array.isArray(data.parties) ? (data.parties as unknown[]) : [];
@@ -983,6 +999,12 @@ function GroundedClauses({ data }: { data: Record<string, unknown> }) {
   return (
     <div className="clause-result">
       <CoverageNote coverage={data.coverage} />
+      {data.combined_with_classifier === true && (
+        <div className="clause-field-value" style={{ marginBottom: "12px", fontSize: "13px" }}>
+          Clauses come from the AI and from LexFlow's classifier trained on lawyer-labelled contracts.
+          On those contracts the two together found more clauses than either alone.
+        </div>
+      )}
       {parties.length > 0 && (
         <div className="clause-field">
           <div className="clause-field-heading"><Users size={15} /><span>Parties</span></div>
@@ -1000,7 +1022,10 @@ function GroundedClauses({ data }: { data: Record<string, unknown> }) {
       {clauses.map((clause, i) => (
         <div className="clause-field" key={i}>
           <div className="clause-field-heading" style={{ justifyContent: "space-between", display: "flex", gap: "8px" }}>
-            <span>{String(clause.type)}</span>
+            <span style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+              <span>{String(clause.type)}</span>
+              <SourceLabel source={clause.source} />
+            </span>
             <VerificationBadge status={clause.verification} />
           </div>
           <div className="clause-field-value">{String(clause.explanation || "")}</div>
