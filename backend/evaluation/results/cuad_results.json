@@ -1,21 +1,21 @@
 {
   "model": "openai/gpt-oss-20b",
-  "contracts": 15,
+  "contracts": 40,
   "seed": 2027,
   "totals": {
     "start_and_end": {
-      "predicted": 29,
-      "correct": 19,
+      "predicted": 84,
+      "correct": 51,
       "not_found": 0,
-      "labelled": 81,
-      "found": 19
+      "labelled": 218,
+      "found": 51
     },
     "whole": {
-      "predicted": 105,
-      "correct": 67,
-      "not_found": 6,
-      "labelled": 81,
-      "found": 56
+      "predicted": 270,
+      "correct": 181,
+      "not_found": 10,
+      "labelled": 218,
+      "found": 162
     }
   },
   "unreadable_replies": {
@@ -23,15 +23,15 @@
     "whole": 1
   },
   "calls": {
-    "start_and_end": 15,
-    "whole": 44
+    "start_and_end": 40,
+    "whole": 97
   },
   "recall_difference_ci95": [
-    0.2727272727272727,
-    0.6025641025641026
+    0.42105263157894735,
+    0.5877192982456141
   ],
-  "labelled_clauses": 81,
-  "visible_to_start_and_end": 26,
+  "labelled_clauses": 218,
+  "visible_to_start_and_end": 71,
   "contract_titles": [
     "PROFOUNDMEDICALCORP_08_29_2019-EX-4.5-SUPPLY AGREEMENT",
     "SPOKHOLDINGS,INC_06_19_2020-EX-10.1-COOPERATION AGREEMENT",
@@ -47,6 +47,31 @@
     "WestPharmaceuticalServicesInc_20200116_8-K_EX-10.1_11947529_EX-10.1_Supply Agreement",
     "LohaCompanyltd_20191209_F-1_EX-10.16_11917878_EX-10.16_Supply Agreement",
     "ACCELERATEDTECHNOLOGIESHOLDINGCORP_04_24_2003-EX-10.13-JOINT VENTURE AGREEMENT",
-    "SUCAMPOPHARMACEUTICALS,INC_11_04_2015-EX-10.2-STRATEGIC ALLIANCE AGREEMENT"
+    "SUCAMPOPHARMACEUTICALS,INC_11_04_2015-EX-10.2-STRATEGIC ALLIANCE AGREEMENT",
+    "PaperexchangeComInc_20000322_S-1A_EX-10.4_5202103_EX-10.4_Co-Branding Agreement",
+    "SoupmanInc_20150814_8-K_EX-10.1_9230148_EX-10.1_Franchise Agreement4",
+    "ThriventVariableInsuranceAccountB_20190701_N-6_EX-99.D(IV)_11720968_EX-99.D(IV)_Endorsement Agreement",
+    "WOMENSGOLFUNLIMITEDINC_03_29_2000-EX-10.13-ENDORSEMENT AGREEMENT",
+    "NOVOINTEGRATEDSCIENCES,INC_12_23_2019-EX-10.1-JOINT VENTURE AGREEMENT",
+    "PhotronicsInc_20171219_10-QA_EX-10.28_10982650_EX-10.28_Outsourcing Agreement",
+    "CardlyticsInc_20180112_S-1_EX-10.16_11002987_EX-10.16_Maintenance Agreement3",
+    "ALCOSTORESINC_12_14_2005-EX-10.26-AGENCY AGREEMENT",
+    "XinhuaSportsEntertainmentLtd_20070221_F-1_EX-99.4_645553_EX-99.4_Content License Agreement",
+    "WEBHELPCOMINC_03_22_2000-EX-10.8-HOSTING AGREEMENT",
+    "TEARDROPGOLFCO_10_23_1996-EX-10.12-ENDORSEMENT AGREEMENT",
+    "PANDIONTHERAPEUTICSHOLDCOLLC_05_22_2020-EX-10.17-CONSULTING AGREEMENT",
+    "KENTUCKYUTILITIESCO_03_25_2003-EX-10.65-TRANSPORTATION AGREEMENT",
+    "EbixInc_20010515_10-Q_EX-10.3_4049767_EX-10.3_Co-Branding Agreement",
+    "ScansourceInc_20190822_10-K_EX-10.39_11793959_EX-10.39_Distributor Agreement",
+    "PhoenixNewMediaLtd_20110421_F-1_EX-10.17_6958322_EX-10.17_Content License Agreement",
+    "TRIZETTOGROUPINC_08_18_1999-EX-10.17-TECHNICAL INFRASTRUCTURE MAINTENANCE AGREEMENT",
+    "AgapeAtpCorp_20191202_10-KA_EX-10.1_11911128_EX-10.1_Supply Agreement",
+    "ScansourceInc_20190509_10-Q_EX-10.2_11661422_EX-10.2_Distributor Agreement",
+    "CHERRYHILLMORTGAGEINVESTMENTCORP_09_26_2013-EX-10.1-Strategic Alliance Agreement",
+    "ArconicRolledProductsCorp_20191217_10-12B_EX-2.7_11923804_EX-2.7_Trademark License Agreement",
+    "SPIENERGYCO,LTD_07_10_2014-EX-10-Cooperation Agreement of 50MWp Photovoltaic Grid-connected Power Generation Project in Yangqiao of~1",
+    "GpaqAcquisitionHoldingsInc_20200123_S-4A_EX-10.8_11951679_EX-10.8_Service Agreement",
+    "DRIVENDELIVERIES,INC_05_22_2020-EX-10.4-CONSULTING AGREEMENT",
+    "BIOPURECORP_06_30_1999-EX-10.13-AGENCY AGREEMENT"
   ]
 }
