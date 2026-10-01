@@ -13,6 +13,7 @@ I built it as an independent project after friends doing law internships kept se
 | **Cases and documents** | Create cases, upload documents (up to 20 MB), and keep them organised per case |
 | **Text extraction** | PyMuPDF reads digital PDFs; Tesseract OCR reads scanned pages and images |
 | **Summary, classification, clause extraction, risk analysis** | A language model through the Groq API (by default `openai/gpt-oss-20b`), reading the **whole** document section by section |
+| **Clause extraction** | The language model and a classifier trained on lawyer-labelled contracts (CUAD); each clause is labelled with which of them found it, and every quote is checked against the document |
 | **Document comparison** | A text comparison finds exactly which sentences were added, removed or changed; the model only writes a short summary of them |
 | **Case synthesis** | The model combines the summaries of every document in a case |
 | **Search** | Keyword search across a case's documents (TF-IDF ranking of overlapping passages) |
@@ -51,6 +52,30 @@ how much of the document was read.
 the earlier input (the first and last 3,500 characters) with reading the whole contract, using the
 same model and prompt. A labelled clause counts as found when LexFlow reports that clause type with
 a quote that is in the document and overlaps a passage the lawyers labelled.
+
+### Results
+
+40 test contracts, chosen in a fixed random order (seed 2027) from those under 100,000 characters;
+model `openai/gpt-oss-20b` through Groq's free tier, with the same prompt in every row. Full tables,
+including each clause type: `evaluation/results/cuad_results.md` and `evaluation/results/classifier_results.md`.
+
+| Method | Labelled clauses found (of 218) | Findings that match a label |
+|---|---|---|
+| LLM, first and last 3,500 characters (earlier LexFlow) | 51 (23%) | 61% |
+| LLM, whole contract in sections | 162 (74%) | 67% |
+| Trained classifier (below), no API calls | 181 (83%) | 69% |
+| **LLM and classifier together (LexFlow now)** | **201 (92%)** | 67% |
+
+- Reading the whole contract found 51 percentage points more labelled clauses than the earlier
+  input (95% bootstrap interval over contracts: +42 to +59).
+- 10 of the LLM's 270 quotes (4%) were not in the document; LexFlow flags these in red.
+- The trained classifier found more labelled clauses than the LLM (+1 to +17 points, 95% interval),
+  and the two found different clauses, so LexFlow now uses both and labels each clause with where it
+  came from.
+- With a stricter matching rule (most of a finding must lie inside the labelled passage) the order is
+  the same: LLM 67%, classifier 77%, together 87%.
+- "Findings that match a label" is a lower bound on precision: CUAD's lawyers did not label every
+  passage that could fit a category. Risk scores are not evaluated, because there are no expert labels for them.
 
 Across all 102 test contracts, only 169 of the 636 labelled clauses of these 14 types (27%) lie
 inside the first and last 3,500 characters, so the earlier version could not have found the rest.
